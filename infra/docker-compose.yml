@@ -112,7 +112,7 @@ services:
   # --- `start` with an image built by `kc.sh build` and a real certificate chain. -------------------
   keycloak:
     <<: *hardening
-    image: quay.io/keycloak/keycloak:26.7.5@sha256:37dbaf6f0722c9ec246335f36e1ef8b2e6cb960f7c27e0d8c615121a3d475a85
+    image: quay.io/keycloak/keycloak:26.8.1@sha256:79c623a22abacf3fe6c00a5fb30f5b7843d717b234033b80995891c06116d244
     command: ['start-dev', '--import-realm']
     # Not read_only: start-dev re-augments the server on boot and writes below /opt/keycloak/lib/quarkus
     # and /opt/keycloak/data. The image already runs as the unprivileged user 1000.
