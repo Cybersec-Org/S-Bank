@@ -16,7 +16,7 @@
     "api:types": "openapi-typescript ../api/openapi.json -o src/shared/api/schema.d.ts && pnpm exec prettier --write src/shared/api/schema.d.ts"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-async-storage/async-storage": "3.1.1",
     "@tanstack/react-query": "5.104.1",
     "expo": "~57.0.30",
     "expo-auth-session": "~57.0.16",
