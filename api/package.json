@@ -13,7 +13,7 @@
     "dev": "pnpm run prisma:generate && nest start --watch",
     "build": "pnpm run prisma:generate && nest build",
     "start:prod": "node dist/main.js",
-    "lint": "eslint . --max-warnings 0",
+    "lint": "pnpm run prisma:generate && eslint . --max-warnings 0",
     "typecheck": "pnpm run prisma:generate && tsc --noEmit",
     "test": "pnpm run prisma:generate && vitest run --config ./vitest.config.ts",
     "test:e2e": "pnpm run prisma:generate && vitest run --config ./vitest.config.e2e.ts",
