@@ -6,7 +6,7 @@
 # No secrets are built into any layer: configuration arrives as environment variables at run time.
 
 # --- base: Node.js plus the pnpm version pinned in the root package.json -------------------------
-FROM node:24.21.0-alpine3.24@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS base
+FROM node:26.11.1-alpine3.24@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS base
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     CHECKPOINT_DISABLE=1 \
     PRISMA_HIDE_UPDATE_MESSAGE=1
@@ -32,7 +32,7 @@ RUN pnpm --filter=@sbank/api --prod deploy /deploy/runtime
 RUN pnpm --filter=@sbank/api deploy /deploy/migrate
 
 # --- migrate: one-off job that applies migrations (and seeds in development) ---------------------
-FROM node:24.21.0-alpine3.24@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS migrate
+FROM node:26.11.1-alpine3.24@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS migrate
 # The Prisma schema engine links against OpenSSL, which the Alpine Node image does not ship.
 # npm, corepack and yarn ship with the base image but nothing here runs them; they only add
 # vulnerable bundled packages (tar, undici, ...) and a package installer to a container.
@@ -54,7 +54,7 @@ HEALTHCHECK NONE
 CMD ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
 
 # --- runtime: the API itself ----------------------------------------------------------------------
-FROM node:24.21.0-alpine3.24@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS runtime
+FROM node:26.11.1-alpine3.24@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS runtime
 # Same reason as in the migrate stage: only `node` is run in this image.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \
     /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
