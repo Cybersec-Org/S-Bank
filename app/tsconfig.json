@@ -1,0 +1,15 @@
+{
+  "extends": ["expo/tsconfig.base", "../tsconfig.base.json"],
+  "compilerOptions": {
+    "types": ["jest", "expo/types"],
+    // Metro only inlines literal `process.env.EXPO_PUBLIC_X` reads, and expo/types types env as an index
+    // signature, so dot access has to be allowed (deviation from ../tsconfig.base.json).
+    "noPropertyAccessFromIndexSignature": false,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/assets/*": ["./assets/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": ["node_modules", "dist", "dist-native", "android", "ios", "coverage"]
+}

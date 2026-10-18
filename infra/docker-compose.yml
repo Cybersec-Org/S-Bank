@@ -1,0 +1,349 @@
+# S-Bank local stack. Start with:  node scripts/dev-secrets.mjs && pnpm run infra:up
+# Image versions are exact tags plus the digest of the multi-architecture index, so a moved tag cannot
+# change what runs; Dependabot (docker-compose ecosystem) updates tag and digest together.
+# Secrets come only from the git-ignored root .env (every ${...:?} below fails fast when one is missing).
+# Never run `docker compose config` without --quiet: it prints the resolved secrets.
+name: sbank
+
+x-hardening: &hardening
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+networks:
+  # Caddy only: the one network with a published port.
+  edge:
+    driver: bridge
+  # Everything else. `internal: true` means no route to the outside world, so nothing here can call out.
+  internal:
+    driver: bridge
+    internal: true
+  # Only for the opt-in `dev-ports` forwarders: published ports need a non-internal network.
+  devtools:
+    driver: bridge
+
+volumes:
+  app-db-data:
+  kc-db-data:
+  # The local CA of `tls internal` lives here; infra/README.md shows how to trust its root certificate.
+  caddy-data:
+  caddy-config:
+  # softhsm-tokens is declared together with the SoftHSM service in B-28; nothing mounts it yet.
+
+services:
+  # --- PostgreSQL for the application: accounts, transactions, audit log --------------------------
+  app-db:
+    <<: *hardening
+    image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+    # Capabilities that the official entrypoint needs to start as root, fix ownership of the data
+    # directory and then drop to the postgres user: CHOWN/FOWNER (ownership and mode), DAC_OVERRIDE
+    # (root reads files owned by postgres), SETUID/SETGID (gosu).
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    read_only: true
+    # PostgreSQL 18 images keep PGDATA below /var/lib/postgresql (a version directory), not .../data.
+    volumes:
+      - app-db-data:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    tmpfs:
+      - /tmp
+      - /run/postgresql
+    environment:
+      POSTGRES_USER: sbank_admin
+      POSTGRES_DB: sbank
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run node scripts/dev-secrets.mjs}
+      # Read by infra/postgres/init/01-roles.sql through psql's \getenv, first start only.
+      POSTGRES_MIGRATOR_PASSWORD: ${POSTGRES_MIGRATOR_PASSWORD:?run node scripts/dev-secrets.mjs}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?run node scripts/dev-secrets.mjs}
+    healthcheck:
+      # -h 127.0.0.1 on purpose: the temporary server of the first-start initialisation listens on the
+      # unix socket only, so a socket check would report "ready" before the roles exist.
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U sbank_admin -d sbank']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+    networks: [internal]
+
+  # --- PostgreSQL for Keycloak: kept apart so a bug in one data set cannot reach the other -------
+  kc-db:
+    <<: *hardening
+    image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    read_only: true
+    volumes:
+      - kc-db-data:/var/lib/postgresql
+    tmpfs:
+      - /tmp
+      - /run/postgresql
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_DB: keycloak
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:?run node scripts/dev-secrets.mjs}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U keycloak -d keycloak']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+    networks: [internal]
+
+  # --- Mailpit: catches the e-mails Keycloak sends (verification, password reset) ----------------
+  mailpit:
+    <<: *hardening
+    image: axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
+    user: '65532:65532'
+    read_only: true
+    # Mailpit keeps its message store in a temporary file.
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks: [internal]
+
+  # --- Keycloak: OIDC provider. `start-dev` is for local development only; production would use ---
+  # --- `start` with an image built by `kc.sh build` and a real certificate chain. -------------------
+  keycloak:
+    <<: *hardening
+    image: quay.io/keycloak/keycloak:26.7.5@sha256:37dbaf6f0722c9ec246335f36e1ef8b2e6cb960f7c27e0d8c615121a3d475a85
+    command: ['start-dev', '--import-realm']
+    # Not read_only: start-dev re-augments the server on boot and writes below /opt/keycloak/lib/quarkus
+    # and /opt/keycloak/data. The image already runs as the unprivileged user 1000.
+    volumes:
+      # The file name must be <realm>-realm.json for --import-realm; the realm is only imported when it
+      # does not exist yet (see infra/README.md for resetting).
+      - ./keycloak/sbank-realm.json:/opt/keycloak/data/import/sbank-realm.json:ro
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:-temp-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?run node scripts/dev-secrets.mjs}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://kc-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:?run node scripts/dev-secrets.mjs}
+      # TLS ends at Caddy; Keycloak trusts the forwarded headers of exactly that one proxy.
+      KC_HTTP_ENABLED: 'true'
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HOSTNAME: https://${SBANK_DOMAIN:-localhost}/auth
+      # The admin console is never routed by Caddy; with the `dev-ports` profile it is reachable on
+      # http://localhost:8080/auth/admin only.
+      KC_HOSTNAME_ADMIN: http://localhost:8080/auth
+      # Health and readiness are served on the management port 9000 (not published, not routed).
+      KC_HEALTH_ENABLED: 'true'
+      KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
+    healthcheck:
+      # The image has no curl; this is the bash /dev/tcp check from the Keycloak documentation.
+      test:
+        - CMD-SHELL
+        - "{ printf 'HEAD /health/ready HTTP/1.0\\r\\n\\r\\n' >&0; grep 'HTTP/1.0 200'; } 0<>/dev/tcp/localhost/9000"
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 90s
+    depends_on:
+      kc-db:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [internal]
+
+  # --- One-off job: applies the Prisma migrations as the DDL owner sbank_migrator ------------------
+  migrate:
+    <<: *hardening
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+      target: migrate
+    image: sbank-api-migrate:local
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      NODE_ENV: production
+      HOME: /tmp
+      DATABASE_URL: postgresql://sbank_migrator:${POSTGRES_MIGRATOR_PASSWORD:?run node scripts/dev-secrets.mjs}@app-db:5432/sbank
+    depends_on:
+      app-db:
+        condition: service_healthy
+    restart: 'no'
+    networks: [internal]
+
+  # --- The API: runs as sbank_app, which cannot change the schema ---------------------------------
+  api:
+    <<: *hardening
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+      target: runtime
+    image: sbank-api:local
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      NODE_ENV: production # also keeps the Swagger UI off
+      API_PORT: '3000'
+      DATABASE_URL: postgresql://sbank_app:${POSTGRES_APP_PASSWORD:?run node scripts/dev-secrets.mjs}@app-db:5432/sbank
+      CORS_ORIGINS: https://${SBANK_DOMAIN:-localhost}
+      OIDC_ISSUER_URL: https://${SBANK_DOMAIN:-localhost}/auth/realms/sbank
+      OIDC_AUDIENCE: sbank-api
+      # The public issuer URL is not reachable from inside the network, so the keys come directly from Keycloak.
+      OIDC_JWKS_URL: http://keycloak:8080/auth/realms/sbank/protocol/openid-connect/certs
+      # Exactly one proxy hop (Caddy) sits in front of the API.
+      TRUST_PROXY: 'true'
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --quiet --output-document=/dev/null http://127.0.0.1:3000/health || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
+    restart: unless-stopped
+    # B-15: the NBP call needs an outbound route; `internal` has none. Decide it there (egress proxy
+    # that allows api.nbp.pl only) and record it in an ADR; until then the API has no way out.
+    networks: [internal]
+
+  # --- The web app: static Expo export, served on 8080 --------------------------------------------
+  web:
+    <<: *hardening
+    build:
+      context: ..
+      dockerfile: app/Dockerfile
+      args:
+        # Demo data until the live API is wired up; EXPO_PUBLIC_* values are public by design.
+        EXPO_PUBLIC_API_MODE: ${EXPO_PUBLIC_API_MODE:-mock}
+        EXPO_PUBLIC_API_BASE_URL: https://${SBANK_DOMAIN:-localhost}
+        EXPO_PUBLIC_OIDC_ISSUER_URL: https://${SBANK_DOMAIN:-localhost}/auth/realms/sbank
+        EXPO_PUBLIC_OIDC_CLIENT_ID: ${EXPO_PUBLIC_OIDC_CLIENT_ID:-sbank-app}
+    image: sbank-web:local
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --quiet --output-document=/dev/null http://127.0.0.1:8080/index.html || exit 1
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks: [internal]
+
+  # --- Caddy: TLS termination, security headers, routing; the only published ports ----------------
+  caddy:
+    <<: *hardening
+    image: caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+    # The image gives the caddy binary the file capability cap_net_bind_service, which only works while
+    # that capability is in the container's bounding set; it is also what binds 80 and 443.
+    cap_add: [NET_BIND_SERVICE]
+    read_only: true
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      SBANK_DOMAIN: ${SBANK_DOMAIN:-localhost}
+    healthcheck:
+      # The admin API listens on the container loopback only (see the Caddyfile).
+      test:
+        [
+          'CMD-SHELL',
+          'wget --quiet --output-document=/dev/null http://127.0.0.1:2019/config/ || exit 1',
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      api:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [edge, internal]
+
+  # --- Opt-in developer access (profile `dev-ports`), always bound to 127.0.0.1 --------------------
+  # Published ports do not work on an `internal: true` network, so one tiny TCP forwarder per target
+  # joins `internal` (to reach it) and `devtools` (to publish). Start with:
+  #   docker compose --env-file .env -f infra/docker-compose.yml --profile dev-ports up -d --wait
+  dev-port-postgres:
+    <<: *hardening
+    profiles: [dev-ports]
+    image: alpine/socat:1.8.1.1@sha256:7f9a06753033f2b7de18edc2353f2c15153413d95a039163c6db270fc7a6c3b0
+    command: ['TCP-LISTEN:5432,fork,reuseaddr', 'TCP:app-db:5432']
+    user: '65534:65534'
+    read_only: true
+    ports:
+      - '127.0.0.1:5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'nc -z 127.0.0.1 5432']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      app-db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [internal, devtools]
+
+  dev-port-mailpit:
+    <<: *hardening
+    profiles: [dev-ports]
+    image: alpine/socat:1.8.1.1@sha256:7f9a06753033f2b7de18edc2353f2c15153413d95a039163c6db270fc7a6c3b0
+    command: ['TCP-LISTEN:8025,fork,reuseaddr', 'TCP:mailpit:8025']
+    user: '65534:65534'
+    read_only: true
+    ports:
+      - '127.0.0.1:8025:8025'
+    healthcheck:
+      test: ['CMD-SHELL', 'nc -z 127.0.0.1 8025']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      mailpit:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [internal, devtools]
+
+  dev-port-keycloak:
+    <<: *hardening
+    profiles: [dev-ports]
+    image: alpine/socat:1.8.1.1@sha256:7f9a06753033f2b7de18edc2353f2c15153413d95a039163c6db270fc7a6c3b0
+    command: ['TCP-LISTEN:8080,fork,reuseaddr', 'TCP:keycloak:8080']
+    user: '65534:65534'
+    read_only: true
+    ports:
+      - '127.0.0.1:8080:8080'
+    healthcheck:
+      test: ['CMD-SHELL', 'nc -z 127.0.0.1 8080']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [internal, devtools]

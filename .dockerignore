@@ -1,0 +1,29 @@
+# Build context is the repository root (api/Dockerfile, app/Dockerfile).
+# Keep secrets, VCS data and local artifacts out of every image layer.
+.git
+.github
+.claude
+**/.env
+**/.env.*
+!.env.example
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+infra/secrets
+infra/softhsm/tokens
+infra/certs
+**/node_modules
+**/dist
+**/dist-native
+**/build
+**/.expo
+**/coverage
+app/android
+app/ios
+api/src/generated
+docs
+*.md
+!README.md
+*.log
+*.sarif

@@ -1,0 +1,49 @@
+packages:
+  - app
+  - api
+
+# Supply chain (SR-15, T-08): never install a version published in the last 24 hours.
+# Add minimumReleaseAgeExclude only for a named package, with a comment saying why.
+minimumReleaseAge: 1440
+
+# Fail on dependencies the installed Node.js does not support.
+engineStrict: true
+
+# Only packages that really need an install script are listed here (pnpm 11+ replacement for
+# onlyBuiltDependencies). Unlisted build scripts fail the install, so each entry is a review.
+allowBuilds:
+  # Transitive dependency of eslint-config-expo (import resolver). Its postinstall only installs a
+  # fallback binding when the prebuilt optional @unrs/resolver-binding-* package is missing, so the
+  # script is explicitly denied rather than approved.
+  unrs-resolver: false
+  # Prisma 7 CLI (migrate). The postinstall downloads the checksum-verified schema-engine binary from
+  # binaries.prisma.sh, which `prisma migrate` needs; without it the first migrate downloads it at run time.
+  '@prisma/engines': true
+  # The `prisma` preinstall only prints a message when the Node.js version is unsupported (engineStrict
+  # already enforces that), so it is denied.
+  prisma: false
+  # Analytics ping to scarf.sh (transitive of Prisma tooling): no functional purpose here, denied.
+  '@scarf/scarf': false
+  # Only verifies/optimises the native binary that the optional @esbuild/<platform> package already
+  # provides (transitive of tsx and Vite), so it is denied.
+  esbuild: false
+
+# Transitive fixes for advisories that the Prisma CLI (build/migrate tooling, not API runtime code)
+# pulls in. Remove an entry as soon as Prisma ships a release that depends on a fixed version.
+overrides:
+  # GHSA-ggr8-5vv4-36mx (high): stack exhaustion in deepmerge-ts < 8.0.0, used by @prisma/config.
+  deepmerge-ts: 8.0.2
+  # GHSA-3f6p-5ww8-9rcr (high) and GHSA-rgwj-5xj2-c3m3: prisma bundles mysql2 3.15.3 for its MySQL
+  # support; S-Bank only uses PostgreSQL, so the code is never executed.
+  mysql2: 3.24.5
+
+# Advisories that cannot be fixed by upgrading: no release of the package exists that is patched
+# (checked on npm 2026-10-18). Both arrive only through Expo/Metro build tooling (the Metro dev server
+# and EAS code signing), never in the shipped app bundle or in the API. Reviewed in
+# docs/adr/0002-wyjatki-audytu-zaleznosci.md; remove an entry when a fixed release appears.
+auditConfig:
+  ignoreGhsas:
+    # braces <= 3.0.3: stack exhaustion on deeply nested patterns (micromatch in Metro's file map).
+    - GHSA-vfj7-8cjw-p6xm
+    # node-forge <= 1.4.0: RSA PKCS#1 v1.5 verification quirk (@expo/code-signing-certificates, unused).
+    - GHSA-86w9-cpqp-85rv

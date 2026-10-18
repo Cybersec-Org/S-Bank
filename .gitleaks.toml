@@ -1,0 +1,19 @@
+# gitleaks configuration (SR-10, T-07). Extends the default rule set.
+# An allowlist entry needs a reason; never allowlist a real secret — rotate it instead.
+title = "S-Bank gitleaks config"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Templates with placeholders only; generated files without secrets"
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)api/openapi\.json$''',
+  '''(^|/)app/src/shared/api/schema\.d\.ts$''',
+]
+
+[[allowlists]]
+description = "Placeholder marker used by scripts/dev-secrets.mjs"
+regexes = ['''__GENERATE__''']

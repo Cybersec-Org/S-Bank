@@ -1,0 +1,94 @@
+# Dependabot (SR-15, T-08). Cooldown delays version updates so freshly published
+# (possibly malicious) releases are not proposed immediately; security updates are not delayed.
+version: 2
+updates:
+  - package-ecosystem: npm # pnpm workspace (app + api) via the root lockfile
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Warsaw
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+    commit-message:
+      prefix: 'build(deps)'
+    labels: [dependencies]
+    groups:
+      dev-tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+      nestjs:
+        patterns: ['@nestjs/*']
+        update-types: [minor, patch]
+      prisma:
+        patterns: ['prisma', '@prisma/*']
+        update-types: [minor, patch]
+    ignore:
+      # Expo SDK packages move together through `npx expo install --fix` (dependency-update skill).
+      - dependency-name: 'expo'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: 'expo-*'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: '@expo/*'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: 'react-native'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: 'react-native-*'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: 'react'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: 'react-dom'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      # Prisma stays on major 7 until a deliberate upgrade (ADR).
+      - dependency-name: 'prisma'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@prisma/*'
+        update-types: ['version-update:semver-major']
+      # TypeScript majors follow the NestJS CLI and Expo SDK.
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
+
+  - package-ecosystem: github-actions
+    directories: ['/', '/.github/actions/*']
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Warsaw
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: 'ci(deps)'
+    labels: [dependencies, ci]
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: docker
+    directories: ['/api', '/app']
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Warsaw
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: 'build(docker)'
+    labels: [dependencies, docker]
+
+  - package-ecosystem: docker-compose
+    directory: /infra
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Europe/Warsaw
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: 'build(infra)'
+    labels: [dependencies, infra]

@@ -1,0 +1,63 @@
+# --- Secrets (SR-10) — never commit ---------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+id_rsa*
+id_ed25519*
+infra/secrets/
+infra/softhsm/tokens/
+infra/certs/
+
+# --- Dependencies ---------------------------------------------------------
+node_modules/
+.pnpm-store/
+
+# --- Build output ---------------------------------------------------------
+dist/
+dist-native/
+build/
+web-build/
+*.tsbuildinfo
+.turbo/
+
+# --- Expo / React Native (native folders are generated — CNG) --------------
+.expo/
+app/android/
+app/ios/
+expo-env.d.ts
+.metro-health-check*
+
+# --- Generated code --------------------------------------------------------
+api/src/generated/
+
+# --- Tests and reports -----------------------------------------------------
+coverage/
+junit*.xml
+*.sarif
+semgrep.json
+gitleaks-report.*
+zap-*.html
+zap-*.json
+zap-*.md
+
+# --- Logs and OS/editor files ---------------------------------------------
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- Claude Code: personal files ------------------------------------------
+.claude/settings.local.json
+.claude/agent-memory-local/
+CLAUDE.local.md

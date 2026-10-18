@@ -1,0 +1,99 @@
+# S-Bank edge: the only service that publishes ports (80, 443). Everything else is on the
+# internal network. Caddy 2.11: reverse_proxy overwrites X-Forwarded-* because no trusted_proxies
+# are configured, which matches the API's TRUST_PROXY=true (exactly one proxy hop).
+{
+	# The admin API stays on the container loopback; the compose healthcheck uses it.
+	admin 127.0.0.1:2019
+	# The compose file mounts /config as a volume, but nothing needs the autosaved JSON.
+	persist_config off
+	# The local CA root certificate is exported by hand (infra/README.md), not installed in the container.
+	skip_install_trust
+	# Clients that send no SNI (a connection by IP, Java's HTTP stack for "localhost", so ZAP in the DAST
+	# job) would otherwise be dropped with a TLS internal_error instead of getting the site certificate.
+	default_sni {$SBANK_DOMAIN:localhost}
+
+	servers {
+		# HTTP/3 would need a published UDP port, which is deliberately not exposed.
+		protocols h1 h2
+		timeouts {
+			read_header 10s
+			read_body 30s
+		}
+	}
+}
+
+{$SBANK_DOMAIN:localhost} {
+	# Local development: Caddy's internal CA. A public domain drops `issuer internal` and uses ACME.
+	tls {
+		issuer internal
+		protocols tls1.2 tls1.3
+	}
+
+	encode zstd gzip
+
+	# `defer` applies the headers after the upstream answered, so `-Server` also removes the
+	# upstream's own Server header and these values win over duplicates from upstreams.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), geolocation=(), microphone=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		-Server
+		defer
+	}
+
+	# Everything but Keycloak is never framed. Keycloak keeps its own framing policy (CSP
+	# frame-ancestors 'self'): the account console embeds its 3rd-party-cookie check and login-status
+	# pages from /auth in same-origin iframes, and DENY would make keycloak-js time out.
+	@not_keycloak not path /auth /auth/*
+	header @not_keycloak {
+		X-Frame-Options "DENY"
+		defer
+	}
+
+	request_body {
+		max_size 1MB
+	}
+
+	# B-26: the API must trust the client-certificate thumbprint only when Caddy sets it, so a
+	# value sent by a client is always dropped here. The header name is fixed together with B-26.
+	request_header -X-Client-Cert-Thumbprint
+
+	# Internal-only endpoints are never routed (404, not 403, so their existence is not confirmed).
+	@internal_only path /health /health/* /auth/admin /auth/admin/* /auth/realms/master /auth/realms/master/* /auth/metrics /auth/metrics/* /auth/health /auth/health/* /auth/realms/*/clients-registrations /auth/realms/*/clients-registrations/*
+	handle @internal_only {
+		respond 404
+	}
+
+	# Keycloak is served under /auth; `handle` (not handle_path) keeps the prefix because
+	# KC_HTTP_RELATIVE_PATH=/auth.
+	@keycloak path /auth /auth/*
+	handle @keycloak {
+		reverse_proxy keycloak:8080
+	}
+
+	@api path /api /api/*
+	handle @api {
+		reverse_proxy api:3000
+	}
+
+	@public path /public /public/*
+	handle @public {
+		reverse_proxy api:3000
+	}
+
+	# B-26: mTLS (`client_auth` with `require_and_verify` against the S-Bank CA) is configured per TLS
+	# connection policy, not per URL path, so it needs its own listener or hostname. Until then the
+	# partner zone is closed.
+	@partner path /partner /partner/*
+	handle @partner {
+		respond 403
+	}
+
+	# The Expo web export (single-page app); the CSP applies to this handler only.
+	handle {
+		header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+		reverse_proxy web:8080
+	}
+}

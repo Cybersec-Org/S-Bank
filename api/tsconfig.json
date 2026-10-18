@@ -1,0 +1,20 @@
+{
+  // Extends the shared strict options. Nest needs legacy decorators plus emitted metadata for
+  // dependency injection; `verbatimModuleSyntax` stays on, so types are imported with `import type`.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "removeComments": true,
+    "outDir": "./dist",
+    "rootDir": "."
+  },
+  "include": ["src", "test", "scripts", "prisma", "*.ts"]
+}

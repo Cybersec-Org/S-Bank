@@ -1,0 +1,40 @@
+{
+  "name": "sbank",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.9.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "app:start": "pnpm --filter @sbank/app run start",
+    "app:export:web": "pnpm --filter @sbank/app run export:web",
+    "app:export:native": "pnpm --filter @sbank/app run export:native",
+    "app:doctor": "pnpm --filter @sbank/app run doctor",
+    "app:build:android": "pnpm --filter @sbank/app run build:android",
+    "app:api:types": "pnpm --filter @sbank/app run api:types",
+    "api:dev": "pnpm --filter @sbank/api run dev",
+    "api:test:e2e": "pnpm --filter @sbank/api run test:e2e",
+    "api:openapi:generate": "pnpm --filter @sbank/api run openapi:generate",
+    "api:prisma:generate": "pnpm --filter @sbank/api run prisma:generate",
+    "api:prisma:validate": "pnpm --filter @sbank/api run prisma:validate",
+    "api:db:migrate:dev": "pnpm --filter @sbank/api run db:migrate:dev",
+    "api:db:migrate:deploy": "pnpm --filter @sbank/api run db:migrate:deploy",
+    "api:db:check-drift": "pnpm --filter @sbank/api run db:check-drift",
+    "api:db:seed": "pnpm --filter @sbank/api run db:seed",
+    "api:db:reset": "pnpm --filter @sbank/api run db:reset",
+    "infra:up": "docker compose --env-file .env -f infra/docker-compose.yml up -d --wait",
+    "infra:down": "docker compose --env-file .env -f infra/docker-compose.yml down",
+    "infra:logs": "docker compose --env-file .env -f infra/docker-compose.yml logs -f --tail=200"
+  },
+  "devDependencies": {
+    "prettier": "3.9.9",
+    "typescript": "~6.0.3"
+  }
+}
