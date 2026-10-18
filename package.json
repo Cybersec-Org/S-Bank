@@ -34,7 +34,7 @@
     "infra:logs": "docker compose --env-file .env -f infra/docker-compose.yml logs -f --tail=200"
   },
   "devDependencies": {
-    "prettier": "3.9.9",
+    "prettier": "3.9.10",
     "typescript": "~6.0.3"
   }
 }
