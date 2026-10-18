@@ -1,0 +1,12 @@
+pnpm-lock.yaml
+**/node_modules/
+**/dist/
+**/dist-native/
+**/build/
+**/web-build/
+**/.expo/
+**/coverage/
+app/android/
+app/ios/
+api/src/generated/
+*.sarif
