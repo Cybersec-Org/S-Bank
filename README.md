@@ -6,12 +6,12 @@ Projekt realizowany w ramach przedmiotów **Bezpieczeństwo aplikacji i systemó
 
 ## Członkowie zespołu
 
-| Imię i nazwisko | Główna odpowiedzialność                     | GitHub    |
-| --------------- | ------------------------------------------- | --------- |
-| _⟨Osoba 1⟩_     | aplikacja React Native (mobile + web)       | _⟨login⟩_ |
-| _⟨Osoba 2⟩_     | backend API i baza danych                   | _⟨login⟩_ |
-| _⟨Osoba 3⟩_     | tożsamość: Keycloak, OIDC, passkeys         | _⟨login⟩_ |
-| _⟨Osoba 4⟩_     | infrastruktura, CI/CD, testy bezpieczeństwa | _⟨login⟩_ |
+| Imię i nazwisko | Główna odpowiedzialność                     | GitHub         |
+| --------------- | ------------------------------------------- | -------------- |
+| Michał          | aplikacja React Native (mobile + web)       | MichalPokrzywa |
+| Mateusz         | backend API i baza danych                   | Waveus         |
+| Kacper          | tożsamość: Keycloak, OIDC, passkeys         | Sikor915       |
+| Kacper          | infrastruktura, CI/CD, testy bezpieczeństwa | Sikor915       |
 
 ## Wybrany język i technologie
 
