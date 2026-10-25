@@ -2,7 +2,7 @@
 
 Prosta aplikacja bankowa w przeglądarce i na telefonie, zbudowana tak, żeby na działającym przykładzie pokazać poprawnie skonfigurowane, gotowe mechanizmy bezpieczeństwa.
 
-Projekt realizowany w ramach przedmiotów **Bezpieczeństwo aplikacji i systemów mobilnych** oraz **Projektowanie, Bezpieczeństwo i Operacje (DevSecOps)**.
+Projekt realizowany w ramach przedmiotów **Bezpieczeństwo aplikacji i systemów mobilnych**, **Projektowanie, Bezpieczeństwo i Operacje (DevSecOps)**, **Tworzenie Bezpiecznego Oprogramowania** oraz **Zarządzanie Tożsamością i Dostępem**.
 
 ## Członkowie zespołu
 
