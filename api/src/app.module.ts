@@ -3,12 +3,14 @@ import { HealthController } from './health.controller.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PublicModule } from './public/pubilc.module.js';
 import { AccountsModule } from './accounts/accounts.module.js';
+import { AuthModule } from './auth/auth.module.js';
 
 @Module({
   imports: [
     PrismaModule, 
     PublicModule,
-    AccountsModule
+    AccountsModule,
+    AuthModule
   ],
   controllers: [HealthController],
   providers: []
