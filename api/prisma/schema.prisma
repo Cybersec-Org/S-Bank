@@ -3,7 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/local-prisma"
+  //output   = "../node_modules/local-prisma"
 }
 
 datasource db {
@@ -11,12 +11,74 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String   
-  firstName String?  
-  lastName  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum AccountStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+enum TransactionType {
+  INTERNAL_TRANSFER
+  EXTERNAL_TRANSFER
+  DEPOSIT
+}
+
+enum TransactionStatus {
+  COMPLETED
+  PENDING
+  REJECTED
+}
+
+model Account {
+  id            String        @id @default(uuid())
+  iban          String        @unique
+  ownerId       String
+  name          String        @default("Personal Account")
+  currency      String        @default("PLN")
+  balance       Decimal       @default(0.00)
+  dailyLimit    Decimal       @default(5000.00)
+  status        AccountStatus @default(ACTIVE)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  outgoingTransactions Transaction[] @relation("SenderAccount")
+  incomingTransactions Transaction[] @relation("ReceiverAccount")
+
+  @@index([ownerId])
+}
+
+model Transaction {
+  id                String            @id @default(uuid())
+  senderAccountId   String?
+  receiverAccountId String?
+  senderIban        String
+  receiverIban      String
+  receiverName      String
+  amount            Decimal
+  currency          String            @default("PLN")
+  title             String
+  type              TransactionType   @default(INTERNAL_TRANSFER)
+  status            TransactionStatus @default(COMPLETED)
+  createdAt         DateTime          @default(now())
+
+  senderAccount   Account? @relation("SenderAccount", fields: [senderAccountId], references: [id])
+  receiverAccount Account? @relation("ReceiverAccount", fields: [receiverAccountId], references: [id])
+
+  @@index([senderAccountId])
+  @@index([receiverAccountId])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actorRole  String
+  action     String
+  resourceId String
+  details    String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([resourceId])
 }
