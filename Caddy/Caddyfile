@@ -1,0 +1,17 @@
+{
+	auto_https off
+}
+partners.sbank.local:8443 {
+	tls ../certs/server/server.crt ../certs/server/server.key {
+		#tls /etc/caddy/certs/server.crt /etc/caddy/certs/server.key {
+		client_auth {
+			mode require_and_verify
+			trust_pool file {
+				pem_file ../certs/ca/ca.crt
+				#pem_file /etc/caddy/certs/ca.crt
+			}
+		}
+	}
+
+	respond "mTLS authentication successful" 200
+}
