@@ -1,7 +1,10 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Post, Body, Patch } from '@nestjs/common';
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AccountsService } from './accounts.service.js';
 import { MockAuthGuard } from '../auth/mock-auth.guard.js';
+import { CreateTransactionDto } from './dto/create-transaction.dto.js';
+import { UpdateLimitDto } from './dto/update-limit.dto.js';
+import { UpdateStatusDto } from './dto/update-status.dto.js';
 import { type AuthenticatedUser, Role } from '../auth/interfaces/authenticated-user.interface.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { CheckAbilities, PoliciesGuard } from '../auth/policies.guard.js';
@@ -61,5 +64,35 @@ export class AccountsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.accountsService.getAccountTransactionsAuthorized(id, user);
+  }
+
+  @Post(':id/transactions')
+  @ApiOperation({ summary: 'Initiate a bank transfer (Protected by CASL & Balance limits)' })
+  async createTransaction(
+    @Param('id') id: string,
+    @Body() dto: CreateTransactionDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.accountsService.createTransactionAuthorized(id, dto, user);
+  }
+
+  @Patch(':id/limit')
+  @ApiOperation({ summary: 'Update daily limit (Protected - Owner only)' })
+  async updateDailyLimit(
+    @Param('id') id: string,
+    @Body() dto: UpdateLimitDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.accountsService.updateDailyLimitAuthorized(id, dto.newLimit, user);
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Freeze or unfreeze an account (Protected - EMPLOYEE or ADMIN only)' })
+  async updateAccountStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateStatusDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.accountsService.updateStatusAuthorized(id, dto.status, user);
   }
 }
