@@ -27,6 +27,8 @@ allowBuilds:
   # Only verifies/optimises the native binary that the optional @esbuild/<platform> package already
   # provides (transitive of tsx and Vite), so it is denied.
   esbuild: false
+  '@prisma/client': true
+  bcrypt: true
 
 # Transitive fixes for advisories that the Prisma CLI (build/migrate tooling, not API runtime code)
 # pulls in. Remove an entry as soon as Prisma ships a release that depends on a fixed version.
