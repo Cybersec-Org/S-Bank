@@ -3,7 +3,9 @@
 export const GROSZE_PER_ZLOTY = 100;
 export const DEFAULT_CURRENCY = 'PLN';
 
-const NON_BREAKING_SPACE = ' ';
+const NON_BREAKING_SPACE = '\u00A0';
+const MINUS_SIGN = '\u2212';
+const PLUS_SIGN = '+';
 const THOUSANDS_GROUP_SIZE = 3;
 const MAX_INPUT_INTEGER_DIGITS = 12;
 export const RATE_SCALE = 10_000;
@@ -21,17 +23,32 @@ function groupThousands(digits: string): string {
   return groups.join(NON_BREAKING_SPACE);
 }
 
-/** Formats minor units (grosze for PLN) as `1 234,50 zł` without going through floating point. */
+/**
+ * Formats minor units (grosze for PLN) as `1 234,50 zł` without going through floating point.
+ * Negative amounts use the typographic minus: `−18,40 zł`.
+ */
 export function formatMoney(minorUnits: number, currency: string = DEFAULT_CURRENCY): string {
   if (!Number.isSafeInteger(minorUnits)) {
     throw new RangeError('Amount must be a safe integer number of minor units');
   }
-  const sign = minorUnits < 0 ? '-' : '';
+  const sign = minorUnits < 0 ? MINUS_SIGN : '';
   const absolute = Math.abs(minorUnits);
   const whole = Math.trunc(absolute / GROSZE_PER_ZLOTY);
   const fraction = String(absolute % GROSZE_PER_ZLOTY).padStart(2, '0');
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency;
   return `${sign}${groupThousands(String(whole))},${fraction}${NON_BREAKING_SPACE}${symbol}`;
+}
+
+/** `5 000 zł` for whole zloty and `5 000,50 zł` otherwise; used where the design drops empty grosze. */
+export function formatWholeMoney(minorUnits: number, currency: string = DEFAULT_CURRENCY): string {
+  const formatted = formatMoney(minorUnits, currency);
+  return minorUnits % GROSZE_PER_ZLOTY === 0 ? formatted.replace(',00', '') : formatted;
+}
+
+/** Like `formatMoney`, but a positive amount gets an explicit plus: `+120,00 zł`. */
+export function formatSignedMoney(minorUnits: number, currency: string = DEFAULT_CURRENCY): string {
+  const formatted = formatMoney(minorUnits, currency);
+  return minorUnits > 0 ? `${PLUS_SIGN}${formatted}` : formatted;
 }
 
 /**
@@ -66,5 +83,12 @@ export function convertGroszeToForeignMinorUnits(grosze: number, midRateScaled: 
 export function formatScaledRate(midRateScaled: number): string {
   const whole = Math.trunc(midRateScaled / RATE_SCALE);
   const fraction = String(midRateScaled % RATE_SCALE).padStart(4, '0');
+  return `${whole},${fraction}`;
+}
+
+/** Amount as typed into a field: `4280,15` (no grouping, decimal comma), for pre-filling inputs. */
+export function formatAmountInput(minorUnits: number): string {
+  const whole = Math.trunc(minorUnits / GROSZE_PER_ZLOTY);
+  const fraction = String(minorUnits % GROSZE_PER_ZLOTY).padStart(2, '0');
   return `${whole},${fraction}`;
 }

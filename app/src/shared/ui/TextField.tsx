@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
 
 import { pl } from '@/shared/i18n/pl';
@@ -14,6 +15,8 @@ interface TextFieldProps extends Pick<
   readonly error?: string | undefined;
   readonly hint?: string | undefined;
   readonly placeholder?: string;
+  /** Maximum width, for example the employee search box. */
+  readonly maxWidth?: number;
 }
 
 /**
@@ -27,35 +30,49 @@ export function TextField({
   error,
   hint,
   placeholder,
+  maxWidth,
   ...inputProps
 }: TextFieldProps) {
   const theme = useTheme();
+  const [focused, setFocused] = useState(false);
   const hasError = error !== undefined && error !== '';
   return (
-    <View style={{ gap: theme.spacing.xs }}>
-      <Text variant="label">{label}</Text>
+    <View
+      style={{
+        gap: theme.spacing.xs,
+        ...(maxWidth === undefined ? {} : { maxWidth, width: '100%' as const }),
+      }}
+    >
+      <Text variant="label" tone="muted">
+        {label}
+      </Text>
       <TextInput
         {...inputProps}
         value={value}
         onChangeText={onChangeText}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         accessibilityLabel={label}
         {...(hint === undefined ? {} : { accessibilityHint: hint })}
         aria-invalid={hasError}
         {...(placeholder === undefined ? {} : { placeholder })}
-        placeholderTextColor={theme.colors.textMuted}
+        placeholderTextColor={theme.colors.textDisabled}
         autoCorrect={false}
         autoComplete="off"
         style={[
           theme.typography.body,
           {
-            minHeight: theme.minTouchTarget,
-            paddingHorizontal: theme.spacing.md,
-            paddingVertical: theme.spacing.sm,
+            height: theme.layout.fieldHeight,
+            paddingHorizontal: theme.spacing.lg,
             color: theme.colors.text,
             backgroundColor: theme.colors.surface,
-            borderWidth: theme.layout.borderWidth,
-            borderRadius: theme.radii.md,
-            borderColor: hasError ? theme.colors.danger : theme.colors.border,
+            borderWidth: focused ? theme.layout.focusRingWidth : theme.layout.borderWidth,
+            borderRadius: theme.radii.field,
+            borderColor: hasError
+              ? theme.colors.danger
+              : focused
+                ? theme.colors.focusRing
+                : theme.colors.borderStrong,
           },
         ]}
       />

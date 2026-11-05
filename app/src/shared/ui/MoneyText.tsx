@@ -1,4 +1,4 @@
-import { formatMoney } from '@/shared/lib/money';
+import { formatMoney, formatSignedMoney } from '@/shared/lib/money';
 
 import { Text, type TextTone } from './Text';
 import type { TypographyKey } from './theme';
@@ -10,6 +10,8 @@ interface MoneyTextProps {
   readonly variant?: TypographyKey;
   readonly tone?: TextTone;
   readonly align?: 'left' | 'center' | 'right';
+  /** Shows an explicit plus before a positive amount (lists of operations). */
+  readonly signed?: boolean;
 }
 
 export function MoneyText({
@@ -18,10 +20,15 @@ export function MoneyText({
   variant = 'body',
   tone = 'default',
   align = 'left',
+  signed = false,
 }: MoneyTextProps) {
   return (
     <Text variant={variant} tone={tone} align={align} tabular>
-      {currency === undefined ? formatMoney(grosze) : formatMoney(grosze, currency)}
+      {signed
+        ? formatSignedMoney(grosze, currency)
+        : currency === undefined
+          ? formatMoney(grosze)
+          : formatMoney(grosze, currency)}
     </Text>
   );
 }

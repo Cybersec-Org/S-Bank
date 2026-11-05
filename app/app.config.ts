@@ -4,6 +4,14 @@ const APPLICATION_ID = 'pl.sbank.app';
 const NEUTRAL_BACKGROUND = '#FFFFFF';
 
 /**
+ * Domain that serves `https://<domain>/pay/{id}` links (set `APP_LINK_DOMAIN` at build time; it is not
+ * a secret). Empty means only the `sbank://pay/{id}` scheme opens the app. Both forms map to the
+ * `pay/[requestId]` route and carry nothing but the request id.
+ */
+const APP_LINK_DOMAIN = process.env.APP_LINK_DOMAIN?.trim() ?? '';
+const hasLinkDomain = APP_LINK_DOMAIN !== '';
+
+/**
  * Static, non-secret app configuration. Runtime values come from `EXPO_PUBLIC_*` variables
  * (see src/shared/config/env.ts); nothing secret belongs here because the manifest ships in the bundle.
  */
@@ -17,11 +25,24 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'automatic',
   ios: {
     bundleIdentifier: APPLICATION_ID,
+    ...(hasLinkDomain ? { associatedDomains: [`applinks:${APP_LINK_DOMAIN}`] } : {}),
   },
   android: {
     package: APPLICATION_ID,
     // MASVS-STORAGE: no app data (and therefore no tokens) in cloud or adb backups.
     allowBackup: false,
+    ...(hasLinkDomain
+      ? {
+          intentFilters: [
+            {
+              action: 'VIEW',
+              autoVerify: true,
+              data: [{ scheme: 'https', host: APP_LINK_DOMAIN, pathPrefix: '/pay' }],
+              category: ['BROWSABLE', 'DEFAULT'],
+            },
+          ],
+        }
+      : {}),
     predictiveBackGestureEnabled: false,
     adaptiveIcon: {
       backgroundColor: NEUTRAL_BACKGROUND,

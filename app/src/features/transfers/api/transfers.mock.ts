@@ -91,6 +91,7 @@ export function createMockTransfersRepository(
         }
         const reference = dependencies.ledger.recordOutgoing({
           accountId: draft.sourceAccountId,
+          kind: 'transfer',
           amountGrosze: draft.amountGrosze,
           title: draft.title,
           counterpartyName: draft.recipientName,

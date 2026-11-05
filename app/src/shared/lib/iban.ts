@@ -51,19 +51,26 @@ export function formatIban(input: string): string {
   return groups.join(' ');
 }
 
-/** Masks all but the country code and the last four characters: `PL•• •••• … 0001`. */
+/** Hides everything but the last four characters, as the design shows accounts: `•••• 4821`. */
 export function maskIban(input: string): string {
   const iban = normalizeIban(input);
-  if (iban.length <= VISIBLE_TRAILING_CHARACTERS + 2) {
+  if (iban.length <= VISIBLE_TRAILING_CHARACTERS) {
     return MASK_CHARACTER.repeat(iban.length);
   }
-  const country = iban.slice(0, 2);
-  const tail = iban.slice(-VISIBLE_TRAILING_CHARACTERS);
-  const hiddenCount = iban.length - 2 - VISIBLE_TRAILING_CHARACTERS;
-  return formatIban(`${country}${MASK_CHARACTER.repeat(hiddenCount)}${tail}`);
+  return `${MASK_CHARACTER.repeat(IBAN_GROUP_SIZE)} ${iban.slice(-VISIBLE_TRAILING_CHARACTERS)}`;
 }
 
 /** The last four characters, used in accessible labels instead of the whole masked value. */
 export function ibanEnding(input: string): string {
   return normalizeIban(input).slice(-VISIBLE_TRAILING_CHARACTERS);
+}
+
+/**
+ * Live formatting of the IBAN field: keeps letters and digits, upper-cases, puts the Polish `PL` in
+ * front of a number typed on a numeric keypad, stops at 28 characters and groups by four.
+ */
+export function formatIbanInput(input: string): string {
+  const cleaned = input.replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+  const withCountry = /^\d/.test(cleaned) ? `PL${cleaned}` : cleaned;
+  return formatIban(withCountry.slice(0, POLISH_IBAN_LENGTH));
 }

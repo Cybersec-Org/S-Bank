@@ -16,12 +16,13 @@ export function ProgressBar({ percent, label }: ProgressBarProps) {
   const clamped = Math.min(PERCENT_MAX, Math.max(0, Math.round(percent)));
   return (
     <View
+      accessible
       accessibilityRole="progressbar"
       accessibilityLabel={label}
       accessibilityValue={{ min: 0, max: PERCENT_MAX, now: clamped }}
       style={{
         height: theme.layout.progressBarHeight,
-        backgroundColor: theme.colors.surfaceMuted,
+        backgroundColor: theme.colors.border,
         borderRadius: theme.radii.pill,
         overflow: 'hidden',
       }}
@@ -30,7 +31,7 @@ export function ProgressBar({ percent, label }: ProgressBarProps) {
         style={{
           width: `${clamped}%`,
           height: '100%',
-          backgroundColor: theme.colors.accent,
+          backgroundColor: theme.colors.primary,
         }}
       />
     </View>

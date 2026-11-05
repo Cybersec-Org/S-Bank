@@ -1,4 +1,5 @@
 import { createMockRepositories } from '@/shared/api/repositories';
+import { createMockTransfersRepository } from './transfers.mock';
 import type { AssuranceLevel } from '@/shared/auth/roles';
 import { FAKE_IBANS, MOCK_MAIN_ACCOUNT_ID } from '@/shared/api/mock/mock-data';
 
@@ -72,8 +73,8 @@ describe('mock transfers repository', () => {
     await repositories.transfers.confirmDraft({ draftId: draft.id, idempotencyKey: 'key-1' });
 
     const [account] = await repositories.accounts.listAccounts();
-    expect(account?.balanceGrosze).toBe(1_254_320 - 150_000);
-    expect(account?.dailyUsedGrosze).toBe(120_000 + 150_000);
+    expect(account?.balanceGrosze).toBe(428_015 - 150_000);
+    expect(account?.dailyUsedGrosze).toBe(150_000);
   });
 
   it('rejects an amount above the balance', async () => {
@@ -87,12 +88,27 @@ describe('mock transfers repository', () => {
   });
 
   it('rejects an amount above the remaining daily limit', async () => {
-    const { repositories, raiseAcr } = setup('1');
-    raiseAcr();
-    const draft = await repositories.transfers.createDraft(buildInput({ amountGrosze: 400_000 }));
+    // The demo account holds less than its limit, so the limit rule is checked against a richer ledger.
+    const transfers = createMockTransfersRepository(
+      {
+        getAcr: () => '2',
+        ledger: {
+          primaryAccountId: () => MOCK_MAIN_ACCOUNT_ID,
+          getAccountSnapshot: () => ({
+            name: 'Osobisty',
+            balanceGrosze: 5_000_000,
+            remainingDailyLimitGrosze: 100_000,
+            blocked: false,
+          }),
+          recordOutgoing: () => 'OP-TEST',
+        },
+      },
+      { latencyMs: 0 },
+    );
+    const draft = await transfers.createDraft(buildInput({ amountGrosze: 400_000 }));
 
     await expect(
-      repositories.transfers.confirmDraft({ draftId: draft.id, idempotencyKey: 'key-1' }),
+      transfers.confirmDraft({ draftId: draft.id, idempotencyKey: 'key-1' }),
     ).rejects.toMatchObject({ code: 'daily_limit_exceeded' });
   });
 
@@ -111,7 +127,7 @@ describe('mock transfers repository', () => {
 
     expect(replay).toEqual(first);
     const [account] = await repositories.accounts.listAccounts();
-    expect(account?.balanceGrosze).toBe(1_254_320 - 10_000);
+    expect(account?.balanceGrosze).toBe(428_015 - 10_000);
   });
 
   it('removes a cancelled draft', async () => {

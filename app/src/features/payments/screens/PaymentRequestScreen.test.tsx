@@ -17,16 +17,53 @@ function openRequest(requestId: string): void {
   jest.mocked(useLocalSearchParams).mockReturnValue({ requestId });
 }
 
+const PAY_LABEL = pl.payment.pay(`249,00${NBSP}zł`);
+
 describe('PaymentRequestScreen', () => {
-  it('fetches the request by id and shows partner, amount, title and expiry', async () => {
+  it('fetches the request by id and shows partner, amount, title and account', async () => {
     openRequest(MOCK_PENDING_PAYMENT_REQUEST_ID);
     await renderWithProviders(<PaymentRequestScreen />, { signedInAs: 'customer' });
 
-    expect(await screen.findByText('Sklep Demonstracyjny')).toBeOnTheScreen();
-    expect(screen.getByText(`89,90${NBSP}zł`)).toBeOnTheScreen();
-    expect(screen.getByText('Zamówienie nr 2026/10/0042')).toBeOnTheScreen();
-    expect(screen.getByText(/15\.10\.2026/)).toBeOnTheScreen();
+    expect(await screen.findByText('Sklep Rowerowy Szprycha')).toBeOnTheScreen();
+    expect(screen.getByText(pl.payment.partnerBadge)).toBeOnTheScreen();
+    expect(screen.getAllByText(`249,00${NBSP}zł`)).not.toHaveLength(0);
+    expect(screen.getByText('Zamówienie nr 1042')).toBeOnTheScreen();
+    expect(
+      await screen.findByText(pl.transferConfirm.fromValue('Osobisty', '•••• 4821')),
+    ).toBeOnTheScreen();
     expect(screen.getByText(pl.payment.notice)).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: pl.payment.backLabel })).toBeOnTheScreen();
+  });
+
+  it('shows how it was opened and a live expiry counter', async () => {
+    openRequest(MOCK_PENDING_PAYMENT_REQUEST_ID);
+    jest.mocked(useLocalSearchParams).mockReturnValue({
+      requestId: MOCK_PENDING_PAYMENT_REQUEST_ID,
+      source: 'qr',
+    });
+    await renderWithProviders(<PaymentRequestScreen />, { signedInAs: 'customer' });
+
+    expect(await screen.findByLabelText(pl.payment.openedFromQr)).toBeOnTheScreen();
+    expect(screen.getByLabelText(pl.payment.expiresIn(14))).toBeOnTheScreen();
+  });
+
+  it('says "z linku" when no source is given', async () => {
+    openRequest(MOCK_PENDING_PAYMENT_REQUEST_ID);
+    await renderWithProviders(<PaymentRequestScreen />, { signedInAs: 'customer' });
+
+    expect(await screen.findByLabelText(pl.payment.openedFromLink)).toBeOnTheScreen();
+  });
+
+  it('ignores an amount or recipient smuggled into the link', async () => {
+    jest.mocked(useLocalSearchParams).mockReturnValue({
+      requestId: MOCK_PENDING_PAYMENT_REQUEST_ID,
+      amount: '1',
+      to: 'PL00',
+    });
+    await renderWithProviders(<PaymentRequestScreen />, { signedInAs: 'customer' });
+
+    expect(await screen.findByText('Sklep Rowerowy Szprycha')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: PAY_LABEL })).toBeOnTheScreen();
   });
 
   it('approves the payment explicitly and shows the result', async () => {
@@ -35,11 +72,11 @@ describe('PaymentRequestScreen', () => {
       signedInAs: 'customer',
     });
 
-    await fireEvent.press(await screen.findByRole('button', { name: pl.payment.approve }));
+    await fireEvent.press(await screen.findByRole('button', { name: PAY_LABEL }));
 
     expect(await screen.findByText(pl.payment.approvedTitle)).toBeOnTheScreen();
     const [account] = await repositories.accounts.listAccounts();
-    expect(account?.balanceGrosze).toBe(1_254_320 - 8_990);
+    expect(account?.balanceGrosze).toBe(428_015 - 24_900);
   });
 
   it('does not pay anything until the customer approves', async () => {
@@ -48,10 +85,34 @@ describe('PaymentRequestScreen', () => {
       signedInAs: 'customer',
     });
 
-    await screen.findByText('Sklep Demonstracyjny');
+    await screen.findByText('Sklep Rowerowy Szprycha');
 
     const [account] = await repositories.accounts.listAccounts();
-    expect(account?.balanceGrosze).toBe(1_254_320);
+    expect(account?.balanceGrosze).toBe(428_015);
+  });
+
+  it('sends a payment from 1 000 zł through the passkey step-up, like a transfer', async () => {
+    openRequest(MOCK_PENDING_PAYMENT_REQUEST_ID);
+    const { store } = await renderWithProviders(<PaymentRequestScreen />, {
+      signedInAs: 'customer',
+      repositories: (base) => ({
+        ...base,
+        payments: {
+          ...base.payments,
+          getPaymentRequest: async (requestId) => ({
+            ...(await base.payments.getPaymentRequest(requestId)),
+            amountGrosze: 150_000,
+          }),
+        },
+      }),
+    });
+
+    expect(await screen.findByText(pl.payment.stepUpHeading)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: pl.payment.payWithPasskey }));
+
+    expect(await screen.findByText(pl.payment.approvedTitle)).toBeOnTheScreen();
+    const state = store.getState();
+    expect(state.status === 'signedIn' && state.principal.acr).toBe('2');
   });
 
   it('rejects the request', async () => {
@@ -68,7 +129,8 @@ describe('PaymentRequestScreen', () => {
     await renderWithProviders(<PaymentRequestScreen />, { signedInAs: 'customer' });
 
     expect(await screen.findByText(pl.payment.statusExpired)).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: pl.payment.approve })).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: PAY_LABEL })).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /^Zapłać/ })).not.toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: pl.payment.reject })).not.toBeOnTheScreen();
   });
 
@@ -116,7 +178,7 @@ describe('PaymentRequestScreen', () => {
       }),
     });
 
-    await fireEvent.press(await screen.findByRole('button', { name: pl.payment.approve }));
+    await fireEvent.press(await screen.findByRole('button', { name: PAY_LABEL }));
 
     expect(await screen.findByText(pl.errors.insufficientFunds)).toBeOnTheScreen();
   });

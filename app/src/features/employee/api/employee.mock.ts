@@ -1,5 +1,6 @@
-import type { Account, Transaction } from '@/features/accounts';
+import type { Account } from '@/features/accounts';
 import { ApiProblem } from '@/shared/api/problem';
+import { demoTransactions } from '@/shared/api/mock/demo-ledger';
 import { FAKE_IBANS, mockUuid } from '@/shared/api/mock/mock-data';
 import {
   createMockRunner,
@@ -17,23 +18,30 @@ export const MOCK_CUSTOMER_PIOTR_ID = mockUuid(402);
 export const MOCK_CUSTOMER_ZOFIA_ID = mockUuid(403);
 
 const CUSTOMERS: readonly CustomerSummary[] = [
-  { id: MOCK_CUSTOMER_ANNA_ID, displayName: 'Anna Testowa', email: 'anna.testowa@example.test' },
+  {
+    id: MOCK_CUSTOMER_ANNA_ID,
+    displayName: 'Anna Nowak',
+    email: 'anna.nowak@example.com',
+    customerNumber: 1007,
+  },
   {
     id: MOCK_CUSTOMER_PIOTR_ID,
     displayName: 'Piotr Fikcyjny',
     email: 'piotr.fikcyjny@example.test',
+    customerNumber: 1012,
   },
   {
     id: MOCK_CUSTOMER_ZOFIA_ID,
     displayName: 'Zofia Wzorcowa',
     email: 'zofia.wzorcowa@example.test',
+    customerNumber: 1018,
   },
 ];
 
-function accountFor(id: number, name: string, iban: string, balanceGrosze: number): Account {
+function accountFor(id: number, iban: string, balanceGrosze: number): Account {
   return {
     id: mockUuid(id),
-    name,
+    name: 'Osobisty',
     iban,
     balanceGrosze,
     dailyLimitGrosze: 500_000,
@@ -42,28 +50,10 @@ function accountFor(id: number, name: string, iban: string, balanceGrosze: numbe
   };
 }
 
-function transactionFor(
-  id: number,
-  accountId: string,
-  direction: Transaction['direction'],
-  amountGrosze: number,
-  title: string,
-): Transaction {
-  return {
-    id: mockUuid(id),
-    accountId,
-    direction,
-    amountGrosze,
-    title,
-    counterpartyName: 'Kontrahent Testowy',
-    bookedAt: '2026-10-12T10:00:00.000Z',
-  };
-}
-
 function initialAccounts(): Record<string, Account> {
-  const anna = accountFor(451, 'Konto osobiste', FAKE_IBANS.customerMain, 1_254_320);
-  const piotr = accountFor(452, 'Konto osobiste', FAKE_IBANS.customerPiotr, 87_500);
-  const zofia = accountFor(453, 'Konto osobiste', FAKE_IBANS.customerZofia, 410_000);
+  const anna = accountFor(451, FAKE_IBANS.customerMain, 428_015);
+  const piotr = accountFor(452, FAKE_IBANS.customerPiotr, 87_500);
+  const zofia = accountFor(453, FAKE_IBANS.customerZofia, 410_000);
   return { [anna.id]: anna, [piotr.id]: piotr, [zofia.id]: zofia };
 }
 
@@ -110,10 +100,7 @@ export function createMockEmployeeRepository(
         return {
           customer,
           accounts: [account],
-          transactions: [
-            transactionFor(461, account.id, 'incoming', 300_000, 'Wynagrodzenie'),
-            transactionFor(462, account.id, 'outgoing', 45_000, 'Zakupy'),
-          ],
+          transactions: demoTransactions(account.id, 460),
         };
       }),
     setDailyLimit: (accountId, limitGrosze) =>
