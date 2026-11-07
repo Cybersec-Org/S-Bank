@@ -22,7 +22,7 @@ async function bootstrap() {
   }));
 
   const port = Number(process.env['PORT'] ?? 3000);
-  await app.listen(port);
+  await app.listen(port, '127.0.0.1');
   console.log(`Api: http://localhost:${port}`);
   console.log(`Swagger: http://localhost:${port}/docs`);
 }

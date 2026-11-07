@@ -1,17 +1,45 @@
 {
-	auto_https off
+    auto_https off
 }
-partners.sbank.local:8443 {
-	tls ../certs/server/server.crt ../certs/server/server.key {
-		#tls /etc/caddy/certs/server.crt /etc/caddy/certs/server.key {
-		client_auth {
-			mode require_and_verify
-			trust_pool file {
-				pem_file ../certs/ca/ca.crt
-				#pem_file /etc/caddy/certs/ca.crt
-			}
-		}
-	}
 
-	respond "mTLS authentication successful" 200
+partners.sbank.local:8443 {
+    tls ../certs/server/server.crt ../certs/server/server.key {
+        client_auth {
+            mode require_and_verify
+            trust_pool file {
+                pem_file ../certs/ca/ca.crt
+            }
+        }
+    }
+
+    # Tożsamość pobierana z certyfikatu klienta
+    request_header X-Client-CN {http.request.tls.client.subject}
+
+    @partner1_payments {
+        path /api/payments/*
+        header X-Client-CN *CN=Partner1*
+    }
+
+    @partner2_reports {
+        path /api/reports/*
+        header X-Client-CN *CN=Partner2*
+    }
+
+    handle @partner1_payments {
+    	request_header X-Partner-Id partner1
+        reverse_proxy 127.0.0.1:3000
+    }
+
+    handle @partner2_reports {
+    	request_header X-Partner-Id partner2
+        reverse_proxy 127.0.0.1:3000
+    }
+
+    handle /api/* {
+        respond "403 Forbidden" 403
+    }
+
+    handle {
+        respond "S-Bank Partner API" 200
+    }
 }
