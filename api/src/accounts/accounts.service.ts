@@ -92,6 +92,110 @@ export class AccountsService {
     });
   }
 
+  async createTransactionAuthorized(
+    senderAccountId: string,
+    dto: { receiverIban: string; receiverName: string; amount: number; title: string },
+    user: AuthenticatedUser,
+  ) {
+    const senderAccount = await this.findOneAuthorized(senderAccountId, user);
+    const ability = this.caslAbilityFactory.createForUser(user);
+    const subject = CaslAbilityFactory.toAccountSubject(senderAccount as any);
+
+    if (!ability.can(Action.Transfer, subject)) {
+      await this.recordSecurityIncident(user, 'UNAUTHORIZED_TRANSFER_ATTEMPT', senderAccountId, dto);
+      throw new ForbiddenException('You cannot initiate a transfer from this account (Not owner or account frozen).');
+    }
+
+    if (Number(senderAccount.balance) < dto.amount) {
+      throw new ForbiddenException('Insufficient funds.');
+    }
+    if (Number(senderAccount.dailyLimit) < dto.amount) {
+      throw new ForbiddenException('Transaction exceeds daily limit.');
+    }
+
+    const receiverAccount = await this.prisma.account.findUnique({
+      where: { iban: dto.receiverIban },
+    });
+
+    if (!receiverAccount) {
+      throw new NotFoundException('Receiver account IBAN not found in this bank.');
+    }
+
+    this.logger.log(`Processing transfer of ${dto.amount} from ${senderAccountId} to ${receiverAccount.id}`);
+    
+    const result = await this.prisma.$transaction(async (tx) => {
+      await tx.account.update({
+        where: { id: senderAccountId },
+        data: { balance: { decrement: dto.amount } },
+      });
+
+      await tx.account.update({
+        where: { id: receiverAccount.id },
+        data: { balance: { increment: dto.amount } },
+      });
+
+      return tx.transaction.create({
+        data: {
+          senderAccountId,
+          receiverAccountId: receiverAccount.id,
+          senderIban: senderAccount.iban,
+          receiverIban: dto.receiverIban,
+          receiverName: dto.receiverName,
+          amount: dto.amount,
+          currency: senderAccount.currency,
+          title: dto.title,
+          type: 'INTERNAL_TRANSFER',
+          status: 'COMPLETED',
+        },
+      });
+    });
+
+    await this.recordSecurityIncident(user, 'TRANSFER_COMPLETED', senderAccountId, { amount: dto.amount, receiverIban: dto.receiverIban });
+    return result;
+  }
+
+  async updateDailyLimitAuthorized(accountId: string, newLimit: number, user: AuthenticatedUser) {
+    const account = await this.findOneAuthorized(accountId, user);
+    const ability = this.caslAbilityFactory.createForUser(user);
+    const subject = CaslAbilityFactory.toAccountSubject(account as any);
+
+    if (!ability.can(Action.Update, subject)) {
+      await this.recordSecurityIncident(user, 'UNAUTHORIZED_LIMIT_UPDATE', accountId, { newLimit });
+      throw new ForbiddenException('You are not allowed to update the limit for this account.');
+    }
+
+    this.logger.log(`User ${user.id} updating limit for ${accountId} to ${newLimit}`);
+    const updated = await this.prisma.account.update({
+      where: { id: accountId },
+      data: { dailyLimit: newLimit },
+    });
+
+    await this.recordSecurityIncident(user, 'LIMIT_UPDATED', accountId, { newLimit });
+    return this.serializeAccount(updated);
+  }
+
+  async updateStatusAuthorized(accountId: string, newStatus: string, user: AuthenticatedUser) {
+    const account = await this.prisma.account.findUnique({ where: { id: accountId } });
+    if (!account) throw new NotFoundException('Account not found');
+
+    const ability = this.caslAbilityFactory.createForUser(user);
+    const subject = CaslAbilityFactory.toAccountSubject(account as any);
+
+    if (!ability.can(Action.Freeze, subject)) {
+      await this.recordSecurityIncident(user, 'UNAUTHORIZED_STATUS_UPDATE', accountId, { newStatus });
+      throw new ForbiddenException('You do not have permission to freeze/unfreeze accounts.');
+    }
+
+    this.logger.log(`Employee/Admin ${user.id} changing status for ${accountId} to ${newStatus}`);
+    const updated = await this.prisma.account.update({
+      where: { id: accountId },
+      data: { status: newStatus as any },
+    });
+
+    await this.recordSecurityIncident(user, 'ACCOUNT_STATUS_CHANGED', accountId, { newStatus });
+    return this.serializeAccount(updated);
+  }
+
   private async recordSecurityIncident(
     user: AuthenticatedUser,
     action: string,
