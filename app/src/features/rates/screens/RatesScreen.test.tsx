@@ -12,37 +12,77 @@ describe('RatesScreen', () => {
   it('is usable without signing in and lists the NBP table A rates', async () => {
     await renderWithProviders(<RatesScreen />);
 
-    expect(await screen.findByText(pl.rates.source)).toBeOnTheScreen();
-    expect(screen.getByText('4,2315')).toBeOnTheScreen();
+    expect(await screen.findByText(pl.rates.publicEndpoint)).toBeOnTheScreen();
+    expect(
+      screen.getByText(pl.rates.subtitle('196/A/NBP/2026', '8 października 2026')),
+    ).toBeOnTheScreen();
+    expect(screen.getByText(`4,3789 zł`)).toBeOnTheScreen();
+    expect(screen.getByText(`0,1794 zł`)).toBeOnTheScreen();
     ['EUR', 'USD', 'CHF', 'GBP', 'CZK'].forEach((code) => {
       expect(screen.getByLabelText(new RegExp(`^${code},`))).toBeOnTheScreen();
     });
-    expect(screen.getByText(pl.rates.effectiveDate('15.10.2026'))).toBeOnTheScreen();
+  });
+
+  it('mentions the public API endpoint', async () => {
+    await renderWithProviders(<RatesScreen />);
+
+    expect(await screen.findByText(pl.rates.publicEndpoint)).toBeOnTheScreen();
+  });
+
+  it('starts the converter empty for a guest', async () => {
+    await renderWithProviders(<RatesScreen />);
+    await screen.findByText(pl.rates.publicEndpoint);
+
+    expect(screen.getByLabelText(pl.rates.amountLabel)).toHaveDisplayValue('');
+    expect(screen.queryByLabelText(/^To około/)).not.toBeOnTheScreen();
+  });
+
+  it('starts the converter with the balance of the signed-in customer', async () => {
+    await renderWithProviders(<RatesScreen defaultAmountGrosze={428_015} />, {
+      signedInAs: 'customer',
+    });
+    await screen.findByText(pl.rates.publicEndpoint);
+
+    expect(screen.getByLabelText(pl.rates.amountLabel)).toHaveDisplayValue('4280,15');
+    expect(screen.getByLabelText(pl.rates.resultAccessible(`977,45${NBSP}EUR`))).toBeOnTheScreen();
   });
 
   it('converts an amount in zloty at the mid rate of the chosen currency', async () => {
     await renderWithProviders(<RatesScreen />);
-    await screen.findByText(pl.rates.source);
+    await screen.findByText(pl.rates.publicEndpoint);
 
     await fireEvent.changeText(screen.getByLabelText(pl.rates.amountLabel), '1000');
 
-    expect(screen.getByText(pl.rates.result(`236,32${NBSP}EUR`))).toBeOnTheScreen();
+    expect(screen.getByLabelText(pl.rates.resultAccessible(`228,37${NBSP}EUR`))).toBeOnTheScreen();
 
-    await fireEvent.press(screen.getByRole('radio', { name: 'USD' }));
+    await fireEvent.press(screen.getByRole('button', { name: `${pl.rates.currencyLabel}: EUR` }));
+    await fireEvent.press(
+      screen.getByRole('radio', { name: pl.rates.currencyOption('USD', 'dolar amerykański') }),
+    );
 
-    expect(screen.getByText(pl.rates.result(`255,62${NBSP}USD`))).toBeOnTheScreen();
+    expect(screen.getByLabelText(pl.rates.resultAccessible(`255,55${NBSP}USD`))).toBeOnTheScreen();
   });
 
   it('explains an invalid amount and shows no result', async () => {
     await renderWithProviders(<RatesScreen />);
-    await screen.findByText(pl.rates.source);
+    await screen.findByText(pl.rates.publicEndpoint);
 
     await fireEvent.changeText(screen.getByLabelText(pl.rates.amountLabel), 'dużo');
 
     expect(
       screen.getByText(`${pl.common.fieldError}: ${pl.rates.amountInvalid}`),
     ).toBeOnTheScreen();
-    expect(screen.queryByText(/otrzymasz około/)).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText(/^To około/)).not.toBeOnTheScreen();
+  });
+
+  it('offers a way back to the login screen for guests only', async () => {
+    const onBack = jest.fn();
+    await renderWithProviders(<RatesScreen onBack={onBack} />);
+    await screen.findByText(pl.rates.publicEndpoint);
+
+    await fireEvent.press(screen.getByRole('button', { name: pl.rates.backToLogin }));
+
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 
   it('shows the empty state when the table has no rates', async () => {

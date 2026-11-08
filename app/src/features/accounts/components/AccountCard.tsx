@@ -1,59 +1,64 @@
-import { Banner, Box, Card, MoneyText, ProgressBar, Text } from '@/shared/ui';
+import { View } from 'react-native';
+
+import { Banner, Card, MoneyText, Text, useTheme } from '@/shared/ui';
 import { pl } from '@/shared/i18n/pl';
 import { ibanEnding, maskIban } from '@/shared/lib/iban';
-import { formatMoney } from '@/shared/lib/money';
+import { formatWholeMoney } from '@/shared/lib/money';
 
-import {
-  calculateLimitUsagePercent,
-  calculateRemainingDailyLimit,
-  type Account,
-} from '../model/account';
+import type { Account } from '../model/account';
 
 interface AccountCardProps {
   readonly account: Account;
+  /** Second line under the balance, for example the balance in euro at the NBP rate. */
+  readonly approxLine?: string | null;
 }
 
-export function AccountCard({ account }: AccountCardProps) {
-  const remaining = calculateRemainingDailyLimit(account);
+/** The green balance card of the dashboard: account, masked number, balance and today's limit. */
+export function AccountCard({ account, approxLine = null }: AccountCardProps) {
+  const theme = useTheme();
   return (
-    <Card gap="md">
-      <Box gap="xs">
-        <Text variant="heading">{pl.dashboard.accountTitle(account.name)}</Text>
+    <Card tone="primary" radius="large" gap="md" padding="xl">
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: theme.spacing.md,
+        }}
+      >
+        <Text variant="listTitle" tone="inverse">
+          {pl.dashboard.accountTitle(account.name)}
+        </Text>
         <Text
           variant="caption"
-          tone="muted"
+          tone="inverseMuted"
+          tabular
           accessibilityLabel={pl.dashboard.accountEnding(ibanEnding(account.iban))}
         >
           {maskIban(account.iban)}
         </Text>
-      </Box>
-      <Box gap="xs">
-        <Text variant="label" tone="muted">
+      </View>
+      <View style={{ gap: theme.spacing.xs }}>
+        <Text variant="label" tone="inverseMuted">
           {pl.dashboard.balanceLabel}
         </Text>
-        <MoneyText grosze={account.balanceGrosze} variant="money" />
-      </Box>
+        <MoneyText grosze={account.balanceGrosze} variant="balance" tone="inverse" />
+      </View>
+      <View style={{ gap: theme.spacing.xs }}>
+        {approxLine === null ? null : (
+          <Text variant="caption" tone="inverseMuted">
+            {approxLine}
+          </Text>
+        )}
+        <Text variant="caption" tone="inverseMuted">
+          {pl.dashboard.limitToday(formatWholeMoney(account.dailyLimitGrosze))}
+        </Text>
+      </View>
       {account.status === 'blocked' ? (
         <Banner tone="danger" title={pl.dashboard.blocked}>
           {pl.errors.accountBlocked}
         </Banner>
       ) : null}
-      <Box gap="xs">
-        <Text variant="label">{pl.dashboard.limitHeading}</Text>
-        <ProgressBar
-          percent={calculateLimitUsagePercent(account)}
-          label={pl.dashboard.limitBarLabel}
-        />
-        <Text variant="caption" tone="muted">
-          {pl.dashboard.limitUsage(
-            formatMoney(account.dailyUsedGrosze),
-            formatMoney(account.dailyLimitGrosze),
-          )}
-        </Text>
-        <Text variant="caption" tone="muted">
-          {pl.dashboard.limitRemaining(formatMoney(remaining))}
-        </Text>
-      </Box>
     </Card>
   );
 }

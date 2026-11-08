@@ -43,6 +43,7 @@ describe('signedAmountGrosze', () => {
     id: 't',
     accountId: 'a',
     direction: 'outgoing',
+    kind: 'transfer',
     amountGrosze: 1250,
     title: 'x',
     counterpartyName: 'y',

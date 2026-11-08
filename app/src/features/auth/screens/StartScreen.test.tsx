@@ -8,27 +8,44 @@ import { StartScreen } from './StartScreen';
 
 describe('StartScreen', () => {
   describe('in mock mode', () => {
-    it('offers the three demo roles and the public links', async () => {
+    it('shows the logo, the tagline, both login buttons, the info panel and the links', async () => {
       await renderWithProviders(<StartScreen />, { apiMode: 'mock' });
 
-      expect(screen.getByRole('button', { name: pl.start.mockCustomer })).toBeOnTheScreen();
-      expect(screen.getByRole('button', { name: pl.start.mockEmployee })).toBeOnTheScreen();
-      expect(screen.getByRole('button', { name: pl.start.mockAdmin })).toBeOnTheScreen();
+      expect(screen.getByLabelText(pl.start.logoLabel)).toBeOnTheScreen();
+      expect(screen.getByText(pl.common.appName)).toBeOnTheScreen();
+      expect(screen.getByLabelText(pl.start.taglineLabel)).toBeOnTheScreen();
+      expect(screen.getByRole('button', { name: pl.start.loginPasskey })).toBeOnTheScreen();
+      expect(screen.getByRole('button', { name: pl.start.loginPassword })).toBeOnTheScreen();
+      expect(screen.getByText(pl.start.loginInfo)).toBeOnTheScreen();
+      expect(screen.getByText(pl.start.sessionDivider)).toBeOnTheScreen();
       expect(screen.getByRole('link', { name: pl.start.linkRates })).toBeOnTheScreen();
-      expect(screen.getByRole('link', { name: pl.start.linkAtms })).toBeOnTheScreen();
       expect(screen.getByRole('link', { name: pl.start.linkTerms })).toBeOnTheScreen();
     });
 
-    it('does not offer the real login button', async () => {
+    it('keeps biometric unlock inactive in this stage', async () => {
       await renderWithProviders(<StartScreen />, { apiMode: 'mock' });
 
-      expect(screen.queryByRole('button', { name: pl.start.loginLive })).not.toBeOnTheScreen();
+      expect(screen.getByRole('button', { name: pl.start.unlockBiometrics })).toBeDisabled();
     });
 
-    it('signs in as the chosen role', async () => {
-      const { store } = await renderWithProviders(<StartScreen />, { apiMode: 'mock' });
+    it.each([pl.start.loginPasskey, pl.start.loginPassword])(
+      'signs in as the demo customer with "%s"',
+      async (label) => {
+        const { store } = await renderWithProviders(<StartScreen />, { apiMode: 'mock' });
 
-      await fireEvent.press(screen.getByRole('button', { name: pl.start.mockEmployee }));
+        await fireEvent.press(screen.getByRole('button', { name: label }));
+
+        const state = store.getState();
+        expect(state.status === 'signedIn' && state.principal.roles).toEqual(['customer']);
+      },
+    );
+
+    it('hides the staff sign-in until the developer toggle is pressed', async () => {
+      const { store } = await renderWithProviders(<StartScreen />, { apiMode: 'mock' });
+      expect(screen.queryByRole('button', { name: pl.start.devEmployee })).not.toBeOnTheScreen();
+
+      await fireEvent.press(screen.getByRole('button', { name: pl.start.devToggle }));
+      await fireEvent.press(screen.getByRole('button', { name: pl.start.devEmployee }));
 
       const state = store.getState();
       expect(state.status === 'signedIn' && state.principal.roles).toEqual(['employee']);
@@ -50,26 +67,25 @@ describe('StartScreen', () => {
   });
 
   describe('in live mode', () => {
-    it('does not render the mock role switcher at all', async () => {
+    it('does not offer the developer sign-in at all', async () => {
       await renderWithProviders(<StartScreen />, { apiMode: 'live' });
 
-      expect(screen.queryByText(pl.start.mockHeading)).not.toBeOnTheScreen();
-      expect(screen.queryByRole('button', { name: pl.start.mockCustomer })).not.toBeOnTheScreen();
-      expect(screen.queryByRole('button', { name: pl.start.mockEmployee })).not.toBeOnTheScreen();
-      expect(screen.queryByRole('button', { name: pl.start.mockAdmin })).not.toBeOnTheScreen();
+      expect(screen.queryByRole('button', { name: pl.start.devToggle })).not.toBeOnTheScreen();
+      expect(screen.queryByRole('button', { name: pl.start.devEmployee })).not.toBeOnTheScreen();
+      expect(screen.queryByRole('button', { name: pl.start.devAdmin })).not.toBeOnTheScreen();
     });
 
-    it('shows the OIDC login button and no mock badge', async () => {
+    it('shows the login buttons and no mock badge', async () => {
       await renderWithProviders(<StartScreen />, { apiMode: 'live' });
 
-      expect(screen.getByRole('button', { name: pl.start.loginLive })).toBeOnTheScreen();
+      expect(screen.getByRole('button', { name: pl.start.loginPasskey })).toBeOnTheScreen();
       expect(screen.queryByLabelText(pl.common.mockBadge)).not.toBeOnTheScreen();
     });
 
     it('explains that browser login arrives later instead of faking a session', async () => {
       const { store } = await renderWithProviders(<StartScreen />, { apiMode: 'live' });
 
-      await fireEvent.press(screen.getByRole('button', { name: pl.start.loginLive }));
+      await fireEvent.press(screen.getByRole('button', { name: pl.start.loginPasskey }));
 
       expect(screen.getByText(pl.start.loginLiveUnavailable)).toBeOnTheScreen();
       expect(store.getState().status).toBe('signedOut');

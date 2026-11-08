@@ -22,7 +22,7 @@ export function LoadingState({ message = pl.common.loading }: LoadingStateProps)
       accessibilityLiveRegion="polite"
       accessibilityState={{ busy: true }}
     >
-      <ActivityIndicator color={theme.colors.accent} size="large" />
+      <ActivityIndicator color={theme.colors.primary} size="large" />
       <Text tone="muted" align="center">
         {message}
       </Text>

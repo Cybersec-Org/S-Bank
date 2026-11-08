@@ -1,13 +1,16 @@
 import { isIsoDate } from '@/shared/lib/dates';
 
-import { ALL_TRANSACTIONS, type TransactionDirection, type TransactionQuery } from './account';
+import { ALL_TRANSACTIONS, type TransactionQuery } from './account';
+
+/** The filter chips of the history screen: everything, incoming, outgoing or payments only. */
+export type HistoryCategory = 'all' | 'incoming' | 'outgoing' | 'payments';
 
 export type HistoryFilterError = 'invalidFrom' | 'invalidTo' | 'invalidRange';
 
 export interface HistoryFilterInput {
   readonly from: string;
   readonly to: string;
-  readonly direction: TransactionDirection | 'all';
+  readonly category: HistoryCategory;
 }
 
 export interface HistoryFilterResult {
@@ -40,7 +43,9 @@ export function resolveHistoryFilter(input: HistoryFilterInput): HistoryFilterRe
       ...ALL_TRANSACTIONS,
       from: fromValid && !rangeInvalid ? from : null,
       to: toValid && !rangeInvalid ? to : null,
-      direction: input.direction === 'all' ? null : input.direction,
+      direction:
+        input.category === 'incoming' || input.category === 'outgoing' ? input.category : null,
+      paymentsOnly: input.category === 'payments',
     },
   };
 }

@@ -1,5 +1,5 @@
 /** Artificial latency so loading states are visible while designing against mock data. */
-export const MOCK_LATENCY_MS = 400;
+export const MOCK_LATENCY_MS = 300;
 
 export interface MockOptions {
   /** Delay before every call resolves. Tests pass 0. */
@@ -8,12 +8,15 @@ export interface MockOptions {
   readonly failWith: Error | null;
   /** When true, list endpoints return no items (empty-state toggle). */
   readonly empty: boolean;
+  /** Clock for data that depends on the current time (payment request expiry). Tests pass a fixed one. */
+  readonly now: () => Date;
 }
 
 export const DEFAULT_MOCK_OPTIONS: MockOptions = {
   latencyMs: MOCK_LATENCY_MS,
   failWith: null,
   empty: false,
+  now: () => new Date(),
 };
 
 export function resolveMockOptions(partial: Partial<MockOptions> | undefined): MockOptions {

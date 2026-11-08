@@ -6,6 +6,7 @@ export interface CustomerSummary {
   readonly id: string;
   readonly displayName: string;
   readonly email: string;
+  readonly customerNumber: number;
 }
 
 export interface CustomerDetails {

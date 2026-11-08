@@ -1,4 +1,4 @@
-export { TransactionList } from './components/TransactionList';
+export { TransactionList, transactionKindLabel } from './components/TransactionList';
 export { useAccountsQuery } from './hooks/useAccountsQuery';
 export { useTransactionsQuery } from './hooks/useTransactionsQuery';
 export {
@@ -8,6 +8,7 @@ export {
   type Account,
   type Transaction,
   type TransactionDirection,
+  type TransactionKind,
   type TransactionQuery,
 } from './model/account';
 export { accountsKeys } from './model/query-keys';

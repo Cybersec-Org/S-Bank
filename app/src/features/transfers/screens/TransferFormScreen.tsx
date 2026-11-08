@@ -5,13 +5,18 @@ import { calculateRemainingDailyLimit, useAccountsQuery, type Account } from '@/
 import { useRecipientsQuery } from '@/features/recipients';
 import { describeProblem } from '@/shared/api/problem';
 import { pl } from '@/shared/i18n/pl';
-import { formatMoney } from '@/shared/lib/money';
+import { formatIban, formatIbanInput, maskIban } from '@/shared/lib/iban';
+import { formatMoney, formatWholeMoney } from '@/shared/lib/money';
+import { useGoBack } from '@/shared/navigation/useGoBack';
 import {
+  AmountField,
   AsyncBoundary,
   Banner,
   Box,
   Button,
+  Card,
   ChoiceGroup,
+  ProgressBar,
   Screen,
   Text,
   TextField,
@@ -27,6 +32,7 @@ import {
 } from '../model/transfer-form';
 
 const MANUAL_RECIPIENT = 'manual';
+const PERCENT = 100;
 
 function toSourceContext(account: Account | undefined): SourceAccountContext | null {
   if (account === undefined) {
@@ -42,6 +48,7 @@ function toSourceContext(account: Account | undefined): SourceAccountContext | n
 /** FR-05: collects the transfer, saves a draft on the server and continues to the confirmation by id only. */
 export function TransferFormScreen() {
   const router = useRouter();
+  const goBack = useGoBack('/dashboard');
   const accountsQuery = useAccountsQuery();
   const recipientsQuery = useRecipientsQuery();
   const createDraft = useCreateTransferDraftMutation();
@@ -66,12 +73,23 @@ export function TransferFormScreen() {
   const errors = showErrors ? result.errors : {};
   const showStepUpNotice =
     result.amountGrosze !== null && amountRequiresStepUp(result.amountGrosze);
+  const usedAfterGrosze =
+    activeAccount === undefined ? 0 : activeAccount.dailyUsedGrosze + (result.amountGrosze ?? 0);
+  const limitGrosze = activeAccount?.dailyLimitGrosze ?? 0;
+  const limitPercent =
+    limitGrosze <= 0
+      ? PERCENT
+      : Math.min(PERCENT, Math.round((usedAfterGrosze * PERCENT) / limitGrosze));
 
   function chooseRecipient(choice: string): void {
     setRecipientChoice(choice);
     const saved = recipients.find((recipient) => recipient.id === choice);
     if (saved !== undefined) {
-      setForm((current) => ({ ...current, recipientName: saved.name, iban: saved.iban }));
+      setForm((current) => ({
+        ...current,
+        recipientName: saved.name,
+        iban: formatIban(saved.iban),
+      }));
     }
   }
 
@@ -87,7 +105,7 @@ export function TransferFormScreen() {
   }
 
   return (
-    <Screen title={pl.transfer.title}>
+    <Screen title={pl.transfer.title} onBack={goBack} backLabel={pl.transfer.backLabel}>
       <AsyncBoundary
         isLoading={accountsQuery.isPending}
         error={accountsQuery.error}
@@ -98,16 +116,26 @@ export function TransferFormScreen() {
       >
         <Box gap="lg">
           {activeAccount === undefined ? null : (
-            <Box gap="xs">
-              <ChoiceGroup
-                label={pl.transfer.sourceLabel}
-                value={activeAccount.id}
-                onChange={setAccountId}
-                options={accounts.map((account) => ({ value: account.id, label: account.name }))}
-              />
-              <Text variant="caption" tone="muted">
-                {pl.transfer.availableBalance(formatMoney(activeAccount.balanceGrosze))}
-              </Text>
+            <Box gap="sm">
+              {accounts.length > 1 ? (
+                <ChoiceGroup
+                  label={pl.transfer.sourceLabel}
+                  value={activeAccount.id}
+                  onChange={setAccountId}
+                  options={accounts.map((account) => ({ value: account.id, label: account.name }))}
+                />
+              ) : null}
+              <Card gap="xs">
+                <Text variant="label" tone="muted">
+                  {pl.transfer.sourceLabel}
+                </Text>
+                <Text variant="listTitle">
+                  {pl.transfer.sourceSummary(activeAccount.name, maskIban(activeAccount.iban))}
+                </Text>
+                <Text variant="caption" tone="muted">
+                  {pl.transfer.availableBalance(formatMoney(activeAccount.balanceGrosze))}
+                </Text>
+              </Card>
               {errors.account === undefined ? null : (
                 <Banner tone="danger">{TRANSFER_ERROR_MESSAGES[errors.account]}</Banner>
               )}
@@ -128,6 +156,7 @@ export function TransferFormScreen() {
 
           <TextField
             label={pl.transfer.recipientNameLabel}
+            placeholder={pl.transfer.recipientNamePlaceholder}
             value={form.recipientName}
             onChangeText={(recipientName) => setForm((current) => ({ ...current, recipientName }))}
             error={errors.recipientName && TRANSFER_ERROR_MESSAGES[errors.recipientName]}
@@ -136,28 +165,53 @@ export function TransferFormScreen() {
           <TextField
             label={pl.transfer.ibanLabel}
             hint={pl.transfer.ibanHint}
+            placeholder={pl.transfer.ibanPlaceholder}
             value={form.iban}
-            onChangeText={(iban) => setForm((current) => ({ ...current, iban }))}
+            onChangeText={(iban) =>
+              setForm((current) => ({ ...current, iban: formatIbanInput(iban) }))
+            }
             error={errors.iban && TRANSFER_ERROR_MESSAGES[errors.iban]}
+            keyboardType="number-pad"
             autoCapitalize="characters"
           />
-          <TextField
+          <AmountField
             label={pl.transfer.amountLabel}
-            hint={pl.transfer.amountHint}
+            placeholder={pl.transfer.amountPlaceholder}
             value={form.amount}
             onChangeText={(amount) => setForm((current) => ({ ...current, amount }))}
             error={errors.amount && TRANSFER_ERROR_MESSAGES[errors.amount]}
-            keyboardType="decimal-pad"
           />
           <TextField
             label={pl.transfer.titleLabel}
+            placeholder={pl.transfer.titlePlaceholder}
             value={form.title}
             onChangeText={(title) => setForm((current) => ({ ...current, title }))}
             error={errors.title && TRANSFER_ERROR_MESSAGES[errors.title]}
             maxLength={140}
           />
 
-          {showStepUpNotice ? <Banner tone="info">{pl.transfer.stepUpNotice}</Banner> : null}
+          {showStepUpNotice ? (
+            <Banner tone="warning" icon="key" title={pl.transfer.stepUpNoticeTitle}>
+              {pl.transfer.stepUpNoticeBody}
+            </Banner>
+          ) : null}
+
+          {activeAccount === undefined ? null : (
+            <Box gap="sm">
+              <Box direction="row" justify="space-between" gap="md">
+                <Text variant="label" tone="muted">
+                  {pl.transfer.limitAfterLabel}
+                </Text>
+                <Text variant="label" tabular>
+                  {pl.transfer.limitAfterValue(
+                    formatWholeMoney(usedAfterGrosze),
+                    formatWholeMoney(limitGrosze),
+                  )}
+                </Text>
+              </Box>
+              <ProgressBar percent={limitPercent} label={pl.transfer.limitBarLabel(limitPercent)} />
+            </Box>
+          )}
           {createDraft.error === null ? null : (
             <Banner tone="danger">{describeProblem(createDraft.error)}</Banner>
           )}
@@ -166,6 +220,7 @@ export function TransferFormScreen() {
             label={createDraft.isPending ? pl.transfer.submitting : pl.transfer.submit}
             onPress={handleSubmit}
             loading={createDraft.isPending}
+            size="large"
             fullWidth
           />
         </Box>

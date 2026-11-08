@@ -38,6 +38,11 @@ describe('TransferConfirmScreen', () => {
     expect(screen.getByText('Zwrot za bilety')).toBeOnTheScreen();
     expect(screen.getByText(`150,00${NBSP}zł`)).toBeOnTheScreen();
     expect(screen.getByText('PL42 1234 5678 0000 0000 0000 0003')).toBeOnTheScreen();
+    expect(
+      screen.getByText(pl.transferConfirm.fromValue('Osobisty', '•••• 4821')),
+    ).toBeOnTheScreen();
+    expect(screen.getByText(pl.transferConfirm.signedNote)).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: pl.transferConfirm.backLabel })).toBeOnTheScreen();
     expect(screen.queryByText(pl.transferConfirm.stepUpHeading)).not.toBeOnTheScreen();
   });
 
@@ -54,40 +59,58 @@ describe('TransferConfirmScreen', () => {
     expect(await screen.findByText(pl.transferConfirm.successTitle)).toBeOnTheScreen();
     expect(screen.getByText(/Numer operacji: OP-2026-000001/)).toBeOnTheScreen();
     const [account] = await repositories.accounts.listAccounts();
-    expect(account?.balanceGrosze).toBe(1_254_320 - 15_000);
+    expect(account?.balanceGrosze).toBe(428_015 - 15_000);
   });
 
-  it('explains the step-up for 1 000 zł and keeps confirmation disabled until it is done', async () => {
+  it('offers a plain confirm button below 1 000 zł', async () => {
     await renderWithProviders(<TransferConfirmScreen />, {
       signedInAs: 'customer',
       arrange: async (repositories) => {
-        await seedDraft(repositories, 150_000);
+        await seedDraft(repositories, 99_999);
+      },
+    });
+
+    expect(await screen.findByRole('button', { name: pl.transferConfirm.confirm })).toBeEnabled();
+    expect(
+      screen.queryByRole('button', { name: pl.transferConfirm.confirmWithPasskey }),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('explains the step-up from 1 000 zł and asks for the passkey', async () => {
+    await renderWithProviders(<TransferConfirmScreen />, {
+      signedInAs: 'customer',
+      arrange: async (repositories) => {
+        await seedDraft(repositories, 100_000);
       },
     });
 
     expect(await screen.findByText(pl.transferConfirm.stepUpHeading)).toBeOnTheScreen();
     expect(screen.getByText(pl.transferConfirm.stepUpBody)).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: pl.transferConfirm.confirm })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: pl.transferConfirm.confirmWithPasskey }),
+    ).toBeEnabled();
   });
 
-  it('enables confirmation after the (mock) passkey step-up and completes the transfer', async () => {
-    await renderWithProviders(<TransferConfirmScreen />, {
+  it('completes a large transfer after the (simulated) passkey step-up', async () => {
+    const { repositories, store } = await renderWithProviders(<TransferConfirmScreen />, {
       signedInAs: 'customer',
-      arrange: async (repositories) => {
-        await seedDraft(repositories, 150_000);
+      arrange: async (base) => {
+        await seedDraft(base, 150_000);
       },
     });
 
     await fireEvent.press(
-      await screen.findByRole('button', { name: pl.transferConfirm.stepUpMockButton }),
+      await screen.findByRole('button', { name: pl.transferConfirm.confirmWithPasskey }),
     );
-    expect(screen.getByText(pl.transferConfirm.stepUpDone)).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('button', { name: pl.transferConfirm.confirm }));
 
     expect(await screen.findByText(pl.transferConfirm.successTitle)).toBeOnTheScreen();
+    const state = store.getState();
+    expect(state.status === 'signedIn' && state.principal.acr).toBe('2');
+    const [account] = await repositories.accounts.listAccounts();
+    expect(account?.balanceGrosze).toBe(428_015 - 150_000);
   });
 
-  it('offers no mock step-up button in live mode', async () => {
+  it('cannot simulate a passkey in live mode and says so', async () => {
     await renderWithProviders(<TransferConfirmScreen />, {
       apiMode: 'live',
       signedInAs: 'customer',
@@ -98,9 +121,10 @@ describe('TransferConfirmScreen', () => {
 
     await screen.findByText(pl.transferConfirm.stepUpHeading);
 
+    expect(screen.getByText(pl.transferConfirm.stepUpUnavailable)).toBeOnTheScreen();
     expect(
-      screen.queryByRole('button', { name: pl.transferConfirm.stepUpMockButton }),
-    ).not.toBeOnTheScreen();
+      screen.getByRole('button', { name: pl.transferConfirm.confirmWithPasskey }),
+    ).toBeDisabled();
   });
 
   it('shows the API problem in Polish and reuses the idempotency key when retrying', async () => {
@@ -168,7 +192,7 @@ describe('TransferConfirmScreen', () => {
 
     expect(await screen.findByText(pl.transferConfirm.cancelledTitle)).toBeOnTheScreen();
     const [account] = await repositories.accounts.listAccounts();
-    expect(account?.balanceGrosze).toBe(1_254_320);
+    expect(account?.balanceGrosze).toBe(428_015);
   });
 
   it('rejects a malformed draft id without calling the API', async () => {

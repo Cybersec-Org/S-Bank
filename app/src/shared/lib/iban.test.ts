@@ -1,12 +1,23 @@
 import { FAKE_IBANS } from '@/shared/api/mock/mock-data';
 
-import { formatIban, ibanEnding, isValidPolishIban, maskIban, normalizeIban } from './iban';
+import {
+  formatIban,
+  formatIbanInput,
+  ibanEnding,
+  isValidPolishIban,
+  maskIban,
+  normalizeIban,
+} from './iban';
 
 describe('isValidPolishIban', () => {
   it('accepts every IBAN used by the mock data', () => {
     Object.values(FAKE_IBANS).forEach((iban) => {
       expect(isValidPolishIban(iban)).toBe(true);
     });
+  });
+
+  it('accepts the example IBAN shown in the transfer form', () => {
+    expect(isValidPolishIban('PL61 1090 1014 0000 0712 1981 2874')).toBe(true);
   });
 
   it('accepts a spaced, lower-case input', () => {
@@ -34,17 +45,28 @@ describe('IBAN display helpers', () => {
   });
 
   it('groups in blocks of four', () => {
-    expect(formatIban(FAKE_IBANS.customerMain)).toBe('PL96 1234 5678 0000 0000 0000 0001');
+    expect(formatIban(FAKE_IBANS.customerMain)).toBe('PL33 1234 5678 0000 0000 0000 4821');
   });
 
-  it('masks everything except the country and the last four characters', () => {
+  it('masks everything except the last four characters, as the design shows accounts', () => {
     const masked = maskIban(FAKE_IBANS.customerMain);
-    expect(masked).toBe('PL•• •••• •••• •••• •••• •••• 0001');
+    expect(masked).toBe('•••• 4821');
     expect(masked).not.toContain('1234');
   });
 
   it('exposes only the ending for accessible labels', () => {
     expect(ibanEnding(FAKE_IBANS.customerSavings)).toBe('0002');
+  });
+
+  it('formats the IBAN field while typing: PL prefix for digits, groups of four, 28 characters at most', () => {
+    expect(formatIbanInput('61109010140000071219812874')).toBe(
+      'PL61 1090 1014 0000 0712 1981 2874',
+    );
+    expect(formatIbanInput('pl61 1090')).toBe('PL61 1090');
+    expect(formatIbanInput('PL61109010140000071219812874999')).toBe(
+      'PL61 1090 1014 0000 0712 1981 2874',
+    );
+    expect(formatIbanInput('')).toBe('');
   });
 
   it('masks very short values completely', () => {
