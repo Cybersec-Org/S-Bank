@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  //output   = "../node_modules/local-prisma"
 }
 
 datasource db {
@@ -11,74 +10,56 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum AccountStatus {
-  ACTIVE
-  FROZEN
-  CLOSED
-}
-
-enum TransactionType {
-  INTERNAL_TRANSFER
-  EXTERNAL_TRANSFER
-  DEPOSIT
-}
-
-enum TransactionStatus {
-  COMPLETED
-  PENDING
-  REJECTED
+model Customer {
+  id             String    @id // np. 'client-1'
+  firstName      String
+  lastName       String
+  email          String    @unique
+  customerNumber String    @unique
+  accounts       Account[]
+  createdAt      DateTime  @default(now())
 }
 
 model Account {
-  id            String        @id @default(uuid())
-  iban          String        @unique
-  ownerId       String
-  name          String        @default("Personal Account")
-  currency      String        @default("PLN")
-  balance       Decimal       @default(0.00)
-  dailyLimit    Decimal       @default(5000.00)
-  status        AccountStatus @default(ACTIVE)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
+  id                   String        @id @default(uuid())
+  iban                 String        @unique
+  ownerId              String
+  owner                Customer      @relation(fields: [ownerId], references: [id])
+  currency             String        @default("PLN")
+  balance              Decimal       @default(0.00)
+  dailyLimit           Decimal       @default(1000.00)
+  status               String        @default("ACTIVE") // ACTIVE, FROZEN, CLOSED
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
   outgoingTransactions Transaction[] @relation("SenderAccount")
   incomingTransactions Transaction[] @relation("ReceiverAccount")
-
-  @@index([ownerId])
 }
 
 model Transaction {
-  id                String            @id @default(uuid())
-  senderAccountId   String?
+  id                String    @id @default(uuid())
+  operationNumber   String?   @unique // Zwracane po zatwierdzeniu (confirm)
+  senderAccountId   String
   receiverAccountId String?
-  senderIban        String
   receiverIban      String
   receiverName      String
   amount            Decimal
-  currency          String            @default("PLN")
+  currency          String    @default("PLN")
   title             String
-  type              TransactionType   @default(INTERNAL_TRANSFER)
-  status            TransactionStatus @default(COMPLETED)
-  createdAt         DateTime          @default(now())
+  status            String    @default("DRAFT") // DRAFT, COMPLETED, CANCELLED
+  createdAt         DateTime  @default(now())
+  executedAt        DateTime? 
 
-  senderAccount   Account? @relation("SenderAccount", fields: [senderAccountId], references: [id])
+  senderAccount   Account  @relation("SenderAccount", fields: [senderAccountId], references: [id])
   receiverAccount Account? @relation("ReceiverAccount", fields: [receiverAccountId], references: [id])
-
-  @@index([senderAccountId])
-  @@index([receiverAccountId])
-  @@index([createdAt])
 }
 
 model AuditLog {
   id         String   @id @default(uuid())
-  actorId    String
-  actorRole  String
+  userId     String
+  userRole   String
   action     String
-  resourceId String
-  details    String?
+  resourceId String?
   ipAddress  String?
+  reason     String
   createdAt  DateTime @default(now())
-
-  @@index([actorId])
-  @@index([resourceId])
 }
