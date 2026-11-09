@@ -37,7 +37,7 @@ model Account {
 
 model Transaction {
   id                String    @id @default(uuid())
-  operationNumber   String?   @unique // Zwracane po zatwierdzeniu (confirm)
+  operationNumber   String?   @unique (confirm)
   senderAccountId   String
   receiverAccountId String?
   receiverIban      String
