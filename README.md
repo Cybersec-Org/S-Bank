@@ -206,8 +206,3 @@ _Sekcja dodana przez nas – wymaganie projektu to minimum trzy mechanizmy zbudo
 
 Wybraliśmy OIDC zamiast SAML, bo jest projektowany pod aplikacje mobilne i API (tokeny JWT, PKCE).
 
-### Akceptacja prowadzącego
-
-| Data | Status                     | Uwagi |
-| ---- | -------------------------- | ----- |
-|      | zaakceptowano / do poprawy |       |
