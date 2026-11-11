@@ -1,13 +1,18 @@
-import { IsNumber, IsPositive, IsString, Length } from 'class-validator';
+import { IsNumber, IsPositive, IsString, Length, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateTransactionDto {
-  @ApiProperty({ example: 'PL83102010260000140202736451', description: 'Receiver IBAN' })
+  @ApiProperty({ example: 'uuid-sender-account', description: 'Sender Account ID (optional, defaults to primary PLN account)' })
+  @IsOptional()
+  @IsString()
+  senderAccountId?: string;
+
+  @ApiProperty({ example: 'PL99102010260000140202736451', description: 'Receiver IBAN' })
   @IsString()
   @Length(28, 28)
   receiverIban!: string;
 
-  @ApiProperty({ example: 'John Smith', description: 'Receiver Name' })
+  @ApiProperty({ example: 'Anna Nowak', description: 'Receiver Name' })
   @IsString()
   receiverName!: string;
 
@@ -16,7 +21,7 @@ export class CreateTransactionDto {
   @IsPositive()
   amount!: number;
 
-  @ApiProperty({ example: 'Invoice payment', description: 'Transaction title' })
+  @ApiProperty({ example: 'Dinner payment', description: 'Transaction title' })
   @IsString()
   title!: string;
 }

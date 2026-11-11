@@ -1,0 +1,660 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Checks server health",
+        "tags": [
+          "Public"
+        ]
+      }
+    },
+    "/public/rates": {
+      "get": {
+        "operationId": "PublicController_getRates",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get current NBP exchange rates table",
+        "tags": [
+          "Public"
+        ]
+      }
+    },
+    "/public/convert": {
+      "get": {
+        "operationId": "PublicController_convertCurrency",
+        "parameters": [
+          {
+            "name": "amount",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": 100,
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "PLN",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "EUR",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Convert amount between any supported currencies",
+        "tags": [
+          "Public"
+        ]
+      }
+    },
+    "/accounts": {
+      "get": {
+        "operationId": "AccountsController_findAll",
+        "parameters": [
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get list of accounts (includes dailyUsed and owner details)",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/accounts/audit-logs": {
+      "get": {
+        "operationId": "AccountsController_getAuditLogs",
+        "parameters": [
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get security audit logs (Admin only)",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/accounts/{id}": {
+      "get": {
+        "operationId": "AccountsController_findOne",
+        "parameters": [
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get account details with BOLA protection",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/accounts/{id}/transactions": {
+      "get": {
+        "operationId": "AccountsController_getTransactions",
+        "parameters": [
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get account transaction history",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/accounts/{id}/limit": {
+      "patch": {
+        "operationId": "AccountsController_updateLimit",
+        "parameters": [
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLimitDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update account daily limit (Client or Employee)",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/accounts/{id}/status": {
+      "patch": {
+        "operationId": "AccountsController_updateStatus",
+        "parameters": [
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Freeze or unfreeze account (Employee/Admin only)",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/transfers": {
+      "post": {
+        "operationId": "AccountsController_createTransferDraft",
+        "parameters": [
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTransactionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Step 1: Create transfer draft and return summary",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/transfers/{id}/confirm": {
+      "post": {
+        "operationId": "AccountsController_confirmTransfer",
+        "parameters": [
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Step 2: Confirm and execute transfer",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/transfers/{id}/cancel": {
+      "post": {
+        "operationId": "AccountsController_cancelTransfer",
+        "parameters": [
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Step 2 (Alternative): Cancel transfer draft",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/customers/me": {
+      "get": {
+        "operationId": "AccountsController_getMyProfile",
+        "parameters": [
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get logged-in customer profile (for client dashboard)",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/customers": {
+      "get": {
+        "operationId": "AccountsController_searchCustomers",
+        "parameters": [
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "query",
+            "required": false,
+            "in": "query",
+            "description": "Search by first name, last name, email or customer number",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Search customers for employees (GET /customers?query=)",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/customers/{id}": {
+      "get": {
+        "operationId": "AccountsController_getCustomer",
+        "parameters": [
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get customer details along with accounts and history",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "S-Bank API",
+    "description": "",
+    "version": "0.2.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "UpdateLimitDto": {
+        "type": "object",
+        "properties": {
+          "newLimit": {
+            "type": "number",
+            "example": 2000,
+            "description": "New daily limit"
+          }
+        },
+        "required": [
+          "newLimit"
+        ]
+      },
+      "UpdateStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "FROZEN",
+            "enum": [
+              "ACTIVE",
+              "FROZEN",
+              "CLOSED"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "CreateTransactionDto": {
+        "type": "object",
+        "properties": {
+          "senderAccountId": {
+            "type": "string",
+            "example": "uuid-sender-account",
+            "description": "Sender Account ID (optional, defaults to primary PLN account)"
+          },
+          "receiverIban": {
+            "type": "string",
+            "example": "PL99102010260000140202736451",
+            "description": "Receiver IBAN"
+          },
+          "receiverName": {
+            "type": "string",
+            "example": "Anna Nowak",
+            "description": "Receiver Name"
+          },
+          "amount": {
+            "type": "number",
+            "example": 150.5,
+            "description": "Amount to transfer"
+          },
+          "title": {
+            "type": "string",
+            "example": "Dinner payment",
+            "description": "Transaction title"
+          }
+        },
+        "required": [
+          "senderAccountId",
+          "receiverIban",
+          "receiverName",
+          "amount",
+          "title"
+        ]
+      }
+    }
+  }
+}
