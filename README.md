@@ -1,213 +1,188 @@
 # S-Bank
 
-Prosta aplikacja bankowa w przeglądarce i na telefonie, zbudowana tak, żeby na działającym przykładzie pokazać poprawnie skonfigurowane, gotowe mechanizmy bezpieczeństwa.
-
-Projekt realizowany w ramach przedmiotów **Bezpieczeństwo aplikacji i systemów mobilnych**, **Projektowanie, Bezpieczeństwo i Operacje (DevSecOps)**, **Tworzenie Bezpiecznego Oprogramowania** oraz **Zarządzanie Tożsamością i Dostępem**.
+Uproszczona aplikacja bankowa (web i mobile), zbudowana w celu praktycznej demonstracji poprawnie skonfigurowanych mechanizmów bezpieczeństwa w nowoczesnych aplikacjach webowych i mobilnych.
 
 ## Członkowie zespołu
 
-| Imię i nazwisko | Główna odpowiedzialność                     | GitHub         |
-| --------------- | ------------------------------------------- | -------------- |
-| Michał          | aplikacja React Native (mobile + web)       | MichalPokrzywa |
-| Mateusz         | backend API i baza danych                   | Waveus         |
-| Kacper          | tożsamość: Keycloak, OIDC, passkeys         | Sikor915       |
-| Kacper          | infrastruktura, CI/CD, testy bezpieczeństwa | Sikor915       |
+| Imię i nazwisko | Główna odpowiedzialność |
+| :--- | :--- |
+| **Michał Pokrzywa** | Aplikacja (React Native / Expo – mobile i web) |
+| **Mateusz Falfus** | Backend API (NestJS), logika biznesowa i baza danych |
+| **Kacper Sikorski** | Tożsamość (Keycloak), infrastruktura Docker i CI/CD |
 
 ## Wybrany język i technologie
 
-**TypeScript** w całym projekcie.
+W całym projekcie będzie wykorzystywany język **TypeScript**.
 
-| Część                         | Technologie                                                              |
-| ----------------------------- | ------------------------------------------------------------------------ |
-| Aplikacja (web, Android, iOS) | React Native + Expo, react-native-web                                    |
-| Backend – własne API          | Node.js + NestJS, REST z dokumentacją OpenAPI                            |
-| Baza danych                   | PostgreSQL + Prisma                                                      |
-| Logowanie i tożsamość         | Keycloak (OpenID Connect, passkeys)                                      |
-| Infrastruktura                | Docker Compose, Caddy (TLS, mTLS), SoftHSM2 (PKCS#11)                    |
-| CI/CD i DevSecOps             | GitHub Actions, Semgrep / CodeQL, Dependabot, gitleaks, Trivy, OWASP ZAP |
-| Zewnętrzne API                | NBP Web API – kursy walut                                                |
+| Część | Technologie |
+| :--- | :--- |
+| **Aplikacja (web, Android, iOS)** | React Native + Expo, react-native-web |
+| **Backend – własne API** | Node.js + NestJS, REST API z dokumentacją OpenAPI (Swagger) |
+| **Baza danych** | PostgreSQL + Prisma ORM |
+| **Logowanie i tożsamość** | Keycloak |
+| **Infrastruktura** | Docker Compose, Caddy |
+| **CI/CD i bezpieczeństwo kodu** | GitHub Actions, CodeQL, Dependabot |
+| **Zewnętrzne API** | NBP Web API – pobieranie aktualnych kursów walut |
 
 ## Krótki opis
 
-S-Bank pozwala założyć konto, zalogować się, sprawdzić saldo i historię operacji, wykonać przelew, zapłacić kodem QR lub linkiem płatności i przeliczyć kwotę po kursach NBP. Korzystają z niego klienci banku, pracownicy obsługi klienta, administrator oraz partnerzy (np. sklepy internetowe), którzy przez publiczne API wystawiają klientom żądania płatności.
+S-Bank pozwala użytkownikowi założyć konto, bezpiecznie się zalogować, sprawdzić saldo oraz historię operacji, wykonać tradycyjny przelew lub szybką płatność kodem QR, a także przeliczyć kwotę po aktualnych kursach NBP. Z systemu korzystają klienci banku, pracownicy obsługi klienta (posiadający wgląd w dane w trybie tylko do odczytu) oraz administratorzy zarządzający kontami i limitami transakcyjnymi.
 
-Podstawowa czynność to **bezpieczny przelew z własnego rachunku**: serwer pilnuje salda i limitu dziennego, a przelew od 1 000 zł trzeba dodatkowo potwierdzić kluczem dostępu. Funkcjonalnie aplikacja jest celowo mała – najważniejsze są w niej mechanizmy ochrony: OpenID Connect z PKCE, passkeys ze step-up, mTLS, PKCS#11 i kontrola dostępu po stronie serwera.
-
-## Dokumentacja
-
-| Plik                                         | Zawartość                                                                           |
-| -------------------------------------------- | ----------------------------------------------------------------------------------- |
-| [REQUIREMENTS.md](REQUIREMENTS.md)           | cel aplikacji, użytkownicy, wymagania funkcjonalne i bezpieczeństwa, model zagrożeń |
-| [docs/diagramy.md](docs/diagramy.md)         | schemat działania aplikacji, architektura, przebieg przelewu                        |
-| [BACKLOG.md](BACKLOG.md)                     | lista zadań z przypisaniem do osób                                                  |
-| [docs/architecture.md](docs/architecture.md) | mapa modułów, strefy API, gdzie realizowane jest każde wymaganie bezpieczeństwa     |
-
-## Struktura repozytorium
-
-```
-app/      aplikacja React Native (Expo) – mobile i web
-api/      własne API (NestJS)
-infra/    Docker Compose, Caddy, eksport realmu Keycloak, SoftHSM
-docs/     diagramy i opisy mechanizmów bezpieczeństwa
-scripts/  skrypty pomocnicze (np. utworzenie backlogu w GitHub)
-```
-
-## Uruchomienie
-
-Wymagane: Node.js 24 (wersja w `.nvmrc`), Corepack (`corepack enable`, instaluje pinowaną wersję pnpm) oraz Docker z Compose (użytkownik w grupie `docker`).
-
-1. `pnpm install --frozen-lockfile` — zależności całego workspace.
-2. `node scripts/dev-secrets.mjs` — tworzy plik `.env` z losowymi sekretami (nigdy go nie commitujemy i nie wklejamy do czatu).
-3. `pnpm run infra:up` — PostgreSQL, Keycloak, Mailpit, migracje, API, aplikacja web i Caddy; strona jest pod `https://localhost` (certyfikat lokalnego CA, patrz [infra/README.md](infra/README.md)).
-4. Praca nad kodem bez kontenerów aplikacji: `pnpm run api:dev` (API) oraz `pnpm run app:start` (Expo: Android, iOS, przeglądarka). API łączy się z bazą przez port udostępniany profilem `dev-ports` (opis w `infra/README.md`).
-
-Tryby aplikacji: `EXPO_PUBLIC_API_MODE=mock` pokazuje dane demonstracyjne i przełącznik ról, `live` używa prawdziwego API; w trybie `live` ekrany zgłaszają, że funkcja czeka na zadanie z backlogu, dopóki endpoint nie powstanie. Paczka produkcyjna bez jawnego ustawienia działa w trybie `live`.
-
-Sprawdzenie przed przekazaniem zmian: `pnpm run format:check`, `lint`, `typecheck`, `test`, `build` (te same skrypty uruchamia CI). Po zmianie API: `pnpm run api:openapi:generate` i `pnpm run app:api:types`.
+Główną funkcjonalnością w aplikacji jest bezpieczny przelew z własnego rachunku, serwer weryfikuje uprawnienia, stan konta oraz dzienny limit operacji, a przelewy powyżej określonej kwoty (np. 1 000 zł) wymagają dodatkowego potwierdzenia kluczem dostępu (Passkey). Główny nacisk położono na mechanizmy ochrony: uwierzytelnianie OIDC z PKCE, kontrolę dostępu po stronie serwera, bezpieczne przechowywanie sesji i ochronę ekranu na urządzeniu mobilnym, szyfrowanie ruchu oraz automatyczną analizę bezpieczeństwa kodu i kontenerów w CI/CD.
 
 ---
 
-## Karta projektu – Bezpieczeństwo Aplikacji i Systemów Mobilnych (BAiSM)
+## Wymagania środowiskowe
 
-> Szablon do wypełnienia przez sekcję na zajęciach 1. Finalną wersję umieszczacie w README repozytorium przed zajęciami 2. Karta jest punktem odniesienia przez cały semestr: zmiany zgłaszacie prowadzącemu.
+* **Docker** (w wersji `>= 24.0`) oraz **Docker Compose** (w wersji `>= 2.20`)
+* **Node.js** (w wersji `>= 20.x` LTS)
+* **pnpm** (w wersji `>= 9.x`, np. przez `corepack enable`)
 
-### Informacje o sekcji
+---
 
-| Pole                           | Wartość                                                                                                                                                       |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Nazwa sekcji / aplikacji       | Sekcja: _⟨nazwa sekcji⟩_ · Aplikacja: **S-Bank** – prosta bankowość mobilna i webowa                                                                          |
-| Technologia                    | **React Native** (Expo, TypeScript) – jedna baza kodu na Android, iOS i przeglądarkę (react-native-web)                                                       |
-| Skład sekcji (imię i nazwisko) | _⟨imiona i nazwiska członków sekcji⟩_                                                                                                                         |
-| Link do repozytorium           | _⟨adres repozytorium⟩_                                                                                                                                        |
-| Backend                        | **Własne API stworzone przez nas**: Node.js + TypeScript (NestJS), REST API opisane w OpenAPI, baza PostgreSQL. Tożsamość: Keycloak uruchomiony u nas (OIDC). |
+## Sposób instalacji
 
-### 1. Koncepcja aplikacji
+1. Sklonuj repozytorium projektu na dysk lokalny:
+   ```bash
+   git clone DSO-main https://github.com/Cybersec-Org/S-Bank
+   cd S-Bank
+   ```
 
-_Opiszcie aplikację w maksymalnie trzech zdaniach: co robi, dla kogo i jaki problem rozwiązuje._
+2. Wszystkie pakiety, plik konfiguracyjny `.env` oraz tabele w bazie danych PostgreSQL tworzone są automatycznie podczas uruchomienia skryptu startowego.
 
-S-Bank to bardzo prosta aplikacja bankowa (mobilna i webowa) dla klienta indywidualnego: pokazuje rachunki i historię operacji, pozwala wykonać przelew – także z kodu QR lub linku płatności – i przelicza saldo na waluty obce po kursach NBP. Bank wystawia też publiczne API: otwarte kursy walut oraz interfejs dla partnerów (np. sklepów internetowych), którzy tworzą żądania płatności. Aplikacja jest celowo mała funkcjonalnie, bo jej zadaniem jest pokazanie na działającym przykładzie poprawnie skonfigurowanych, gotowych mechanizmów ochrony: OpenID Connect z PKCE, passkeys ze step-up, mTLS i PKCS#11 oraz kontroli dostępu opartej na rolach i własności zasobu.
+---
 
-**Grupa docelowa:** klienci indywidualni korzystający z bankowości w telefonie i w przeglądarce; pracownicy obsługi klienta i administrator banku (panel w tej samej aplikacji); partnerzy integrujący się z bankiem przez API.
+## Sposób uruchomienia
 
-**Temat startowy, z którego korzystacie (jeśli dotyczy):** temat własny – prosta bankowość mobilna. _⟨wpisać numer/nazwę tematu, jeśli na liście prowadzącego jest odpowiednik⟩_
+Zalecanym sposobem uruchomienia projektu jest wykonanie skryptu **`RUNME.sh`** znajdującego się w głównym katalogu repozytorium:
 
-### 2. Role użytkowników
+```bash
+./RUNME.sh
+```
 
-_Wymagane są co najmniej dwie role. Kolumna „Czego NIE może” jest równie ważna jak „Co może” – to z niej wyjdą testy autoryzacji._
+Skrypt automatycznie skonfiguruje środowisko (`.env`), uruchomi bazę danych PostgreSQL w kontenerze Docker, utworzy tabele i wypełni je danymi startowymi (`seed.ts`), a następnie podniesie serwer API oraz odpali aplikację (`app`).
 
-| Rola                                        | Co może                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Czego NIE może                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Klient** (customer)                       | • samodzielnie założyć konto (rejestracja z potwierdzeniem e-maila) – przy rejestracji powstaje rachunek demonstracyjny<br>• logować się hasłem lub passkey<br>• widzieć wyłącznie własne rachunki, saldo i historię<br>• zlecać przelewy z własnych rachunków w ramach limitu dziennego (domyślnie 5 000 zł)<br>• zlecać przelewy od 1 000 zł po dodatkowym potwierdzeniu passkey (step-up)<br>• zarządzać własną listą odbiorców<br>• opłacać żądania płatności z kodu QR lub linku<br>• włączyć odblokowanie aplikacji biometrią | • odczytać rachunku, historii ani odbiorców innego klienta – także przez podmianę identyfikatora w żądaniu do API<br>• zlecić przelewu z cudzego rachunku<br>• przekroczyć limitu dziennego ani samodzielnie go zmienić<br>• zlecić przelewu od 1 000 zł bez świeżego step-up<br>• zablokować ani odblokować rachunku<br>• wejść do panelu pracownika i administratora ani czytać dziennika audytowego<br>• wywołać API partnerskiego |
-| **Pracownik banku** (employee)              | • wyszukiwać klientów<br>• podglądać rachunki i historię klienta w trybie tylko do odczytu (każdy podgląd trafia do dziennika audytowego)<br>• blokować i odblokowywać rachunek<br>• zmieniać limit dzienny klienta w dozwolonym przedziale                                                                                                                                                                                                                                                                                         | • zlecić ani zatwierdzić przelewu w imieniu klienta<br>• zmienić salda, edytować ani usunąć transakcji<br>• nadawać ról ani tworzyć kont pracowników<br>• czytać ani czyścić dziennika audytowego<br>• zarządzać partnerami API i ich certyfikatami<br>• zalogować się samym hasłem (wymagany passkey)                                                                                                                                |
-| **Administrator** (admin)                   | • zarządzać kontami i rolami (Keycloak)<br>• rejestrować partnerów API i wystawiać im certyfikaty<br>• czytać dziennik audytowy<br>• ustawiać parametry globalne (próg step-up, zakres limitów)                                                                                                                                                                                                                                                                                                                                     | • zlecić przelewu z rachunku klienta ani zmienić salda<br>• modyfikować ani usuwać wpisów dziennika audytowego (tabela tylko do dopisywania)<br>• zobaczyć haseł, kluczy passkey ani klucza prywatnego w HSM<br>• zalogować się samym hasłem (wymagany passkey)                                                                                                                                                                       |
-| **Partner API** (partner, klient maszynowy) | • uwierzytelnić się certyfikatem klienta (mTLS) i pobrać token<br>• utworzyć żądanie płatności (kwota, tytuł) na własny rachunek<br>• sprawdzić status własnych żądań płatności                                                                                                                                                                                                                                                                                                                                                     | • odczytać salda, historii ani danych osobowych klienta<br>• doprowadzić do przelewu bez zatwierdzenia przez klienta w aplikacji<br>• zobaczyć żądań płatności innego partnera<br>• użyć tokenu z innym certyfikatem niż ten, na który token wydano<br>• połączyć się z /partner bez certyfikatu podpisanego przez nasze CA                                                                                                           |
-| **Gość** (niezalogowany)                    | • zarejestrować się<br>• czytać kursy walut z publicznego API<br>• otworzyć regulamin i listę bankomatów                                                                                                                                                                                                                                                                                                                                                                                                                            | • wywołać żadnego innego endpointu – API domyślnie odmawia (deny by default)<br>• przekroczyć limitu liczby zapytań (rate limiting)                                                                                                                                                                                                                                                                                                   |
+---
 
-### 3. Dane i ich klasyfikacja
+## Adres aplikacji
 
-_Wypiszcie wszystkie dane, które aplikacja zbiera, przetwarza lub przechowuje. Przy każdej pozycji określcie poziom wrażliwości._
+* **Backend API:** `http://localhost:3000`
+* **Endpoint statusu aplikacji (Healthcheck):** `http://localhost:3000/health`
+* **Dokumentacja OpenAPI (Swagger UI):** `http://localhost:3000/api`
+* **Aplikacja webowa / Expo:** `http://localhost:8081`
 
-| Dane                                                                 | Skąd pochodzą                                               | Gdzie są przechowywane (urządzenie / backend / oba)                                                           | Klasyfikacja         | Uzasadnienie                                                                                |
-| -------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------- |
-| Dane profilu: imię i nazwisko, e-mail                                | użytkownik przy rejestracji                                 | Backend (baza Keycloak). Urządzenie: tylko w pamięci (z ID tokenu)                                            | Poufne               | Dane osobowe; e-mail jest loginem                                                           |
-| Hasło (metoda zapasowa obok passkey)                                 | użytkownik                                                  | Backend – Keycloak, wyłącznie skrót hasła. Aplikacja nigdy go nie widzi (logowanie w przeglądarce systemowej) | Poufne               | Wyciek skrótów naraża konta także w innych serwisach                                        |
-| Passkey: klucz publiczny i identyfikator poświadczenia               | generowane na urządzeniu przy rejestracji passkey           | Klucz publiczny: backend (Keycloak). Klucz prywatny: bezpieczny magazyn systemu – poza zasięgiem aplikacji    | Poufne               | Klucz publiczny nie jest sekretem, ale jest powiązany z kontem; prywatnego nie przetwarzamy |
-| Access token (JWT, ważny 5 min)                                      | Keycloak                                                    | Urządzenie: tylko pamięć RAM. Backend go nie zapisuje – weryfikuje podpis                                     | Poufne               | Daje dostęp do API do chwili wygaśnięcia                                                    |
-| Refresh token                                                        | Keycloak                                                    | Urządzenie: expo-secure-store (Keychain / Keystore) z wymogiem biometrii. Web: tylko pamięć                   | Poufne               | Długo żyjący – kradzież oznacza przejęcie sesji; rotowany przy każdym użyciu                |
-| Numer rachunku i saldo                                               | backend (rachunek demonstracyjny tworzony przy rejestracji) | Backend (PostgreSQL). Urządzenie: tylko pamięć, bez zapisu na dysk                                            | Szczególnie wrażliwe | Dane finansowe; minimalizacja – brak kopii lokalnej                                         |
-| Historia transakcji                                                  | powstaje z przelewów                                        | Backend. Urządzenie: tylko pamięć                                                                             | Szczególnie wrażliwe | Finanse; pozwala odtworzyć zwyczaje i kontakty klienta, dlatego poziom wyższy niż minimalny |
-| Lista zapisanych odbiorców                                           | użytkownik                                                  | Backend                                                                                                       | Poufne               | Dane osób trzecich (nazwa, numer rachunku)                                                  |
-| Żądania płatności partnerów (kwota, tytuł, status)                   | Partner API                                                 | Backend                                                                                                       | Poufne               | Dane handlowe partnera powiązane z klientem                                                 |
-| Dokładna lokalizacja                                                 | GPS urządzenia, za zgodą                                    | Tylko urządzenie, tylko pamięć. Nie jest wysyłana do backendu                                                 | Szczególnie wrażliwe | Służy wyłącznie do posortowania bankomatów według odległości – liczone lokalnie             |
-| Obraz z kamery (skan QR)                                             | kamera, za zgodą                                            | Tylko urządzenie, przetwarzany w locie; klatki nie są zapisywane                                              | Wewnętrzne           | Z kodu odczytujemy jedynie identyfikator żądania płatności                                  |
-| Dane biometryczne                                                    | czytnik linii papilarnych / rozpoznawanie twarzy            | System operacyjny. Aplikacja dostaje tylko wynik: zgodne / niezgodne                                          | Szczególnie wrażliwe | Nie przetwarzamy i nie przechowujemy – wzorzec zostaje w systemie                           |
-| Preferencje: motyw, język, flaga „biometria włączona”                | użytkownik                                                  | Urządzenie (AsyncStorage)                                                                                     | Wewnętrzne           | Brak danych osobowych; wystarcza izolacja piaskownicy aplikacji                             |
-| Dziennik audytowy: kto, co, kiedy, adres IP, poziom uwierzytelnienia | backend                                                     | Backend (tabela tylko do dopisywania)                                                                         | Poufne               | Zawiera identyfikatory użytkowników i adresy IP                                             |
-| Klucz podpisujący potwierdzenia przelewów; klucz naszego CA dla mTLS | generowane wewnątrz tokenu                                  | Backend – SoftHSM (PKCS#11), klucz nieeksportowalny                                                           | Poufne               | Kompromitacja pozwala fałszować potwierdzenia i wystawiać certyfikaty partnerów             |
-| Certyfikaty partnerów (publiczne) i ich odciski                      | wystawia nasze CA                                           | Backend                                                                                                       | Wewnętrzne           | Klucz prywatny zostaje u partnera                                                           |
-| Kursy walut NBP, lista bankomatów, regulamin                         | NBP Web API / dane własne                                   | Backend (cache); urządzenie (pamięć)                                                                          | Publiczne            | Dane jawne                                                                                  |
+---
 
-**Poziomy klasyfikacji:**
+## Opis endpointów
 
-| Poziom               | Przykłady                                         | Minimalna ochrona                                          |
-| -------------------- | ------------------------------------------------- | ---------------------------------------------------------- |
-| Publiczne            | opis wydarzenia, cennik, regulamin                | brak szczególnych wymagań                                  |
-| Wewnętrzne           | preferencje, historia wyszukiwań, ustawienia      | izolacja od innych aplikacji                               |
-| Poufne               | e-mail, tokeny sesji, historia transakcji         | bezpieczny magazyn systemowy, szyfrowanie                  |
-| Szczególnie wrażliwe | zdrowie, biometria, finanse, dokładna lokalizacja | minimalizacja danych; często brak przechowywania lokalnego |
+| Metoda | Ścieżka | Opis endpointu |
+| :--- | :--- | :--- |
+| `GET` | `/health` | Sprawdza, czy aplikacja jest uruchomiona i zwraca odpowiedni status (`200 OK`). |
+| `GET` | `/public/rates` | Pobiera aktualną tabelę średnich kursów walut z zewnętrznego API NBP. |
+| `GET` | `/public/convert` | Przelicza podaną kwotę (`amount`) pomiędzy wybranymi walutami (`from`, `to`). |
+| `GET` | `/accounts` | Zwraca listę rachunków bankowych wraz z saldem, limitem dziennym i kwotą wykorzystaną danego dnia (`dailyUsed`). |
+| `GET` | `/accounts/audit-logs` | Zwraca dziennik audytowy bezpieczeństwa z zarejestrowanymi zdarzeniami. |
+| `GET` | `/accounts/{id}` | Zwraca szczegóły pojedynczego rachunku bankowego na podstawie jego identyfikatora. |
+| `GET` | `/accounts/{id}/transactions` | Zwraca historię zrealizowanych transakcji dla wskazanego rachunku. |
+| `PATCH` | `/accounts/{id}/limit` | Zmienia dzienny limit operacji na wskazanym rachunku bankowym. |
+| `PATCH` | `/accounts/{id}/status` | Zmienia status rachunku bankowego (`ACTIVE`, `FROZEN`, `CLOSED`). |
+| `POST` | `/transfers` | **Krok 1 przelewu:** Waliduje stan konta oraz limit dzienny i tworzy szkic przelewu (`DRAFT`). |
+| `POST` | `/transfers/{id}/confirm` | **Krok 2 przelewu:** Zatwierdza szkic przelewu i wykonuje transfer środków pomiędzy rachunkami (`COMPLETED`). |
+| `POST` | `/transfers/{id}/cancel` | **Krok 2 (alternatywny):** Anuluje utworzony wcześniej szkic przelewu (`CANCELLED`). |
+| `GET` | `/customers/me` | Zwraca profil zalogowanego klienta wraz z jego rachunkami i historią transakcji. |
+| `GET` | `/customers` | Wyszukuje klientów po imieniu, nazwisku, adresie e-mail lub numerze klienta (`?query=`). |
+| `GET` | `/customers/{id}` | Zwraca szczegółowe dane wskazanego klienta wraz z rachunkami i historią operacji. |
 
-### 4. Mapowanie na umowę o powierzchni ataku
+---
 
-_Każdy projekt musi zawierać wszystkie poniższe funkcje. Opiszcie, jak konkretnie pojawią się w waszej aplikacji._
+## Przykładowe żądania
 
-| Wymagana funkcja                                                         | Jak realizujemy ją w naszej aplikacji                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Planowane na zajęcia                         |
-| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Logowanie z tokenami i co najmniej dwie role                             | • rejestracja na stronie Keycloak (potwierdzenie e-maila, polityka haseł); po pierwszym logowaniu API zakłada rachunek demonstracyjny<br>• OpenID Connect: Authorization Code + PKCE do Keycloak przez przeglądarkę systemową (expo-auth-session) – aplikacja nie dotyka hasła<br>• access token JWT ważny 5 min i rotowany refresh token<br>• role w tokenie: customer, employee, admin oraz klient maszynowy partner<br>• API sprawdza podpis (JWKS), wystawcę, odbiorcę i ważność tokenu biblioteką jose<br>• logowanie passkey; przelew od 1 000 zł wymaga step-up (poziom acr sprawdzany także w API) | Z3 (OIDC, role), Z4 (passkey, step-up)       |
-| Własny backend/API lub Firebase/Supabase z regułami dostępu              | • własne REST API stworzone przez nas (NestJS) za reverse proxy Caddy (TLS); reguły dostępu zapisane w kodzie API<br>• domyślna odmowa: globalny strażnik wymaga tokenu, każdy endpoint deklaruje rolę, a polityki CASL sprawdzają właściciela rekordu<br>• trzy strefy: /public (bez logowania, limit zapytań), /api (token użytkownika), /partner (mTLS + token związany z certyfikatem)<br>• walidacja wejścia, dokumentacja OpenAPI, dziennik audytowy                                                                                                                                                 | Z2 (szkielet), Z3 (autoryzacja), Z5 (mTLS)   |
-| Lokalne przechowywanie danych wrażliwych (tokeny, dane osobowe, cache)   | • refresh token w expo-secure-store (Keychain / Keystore) z opcją requireAuthentication<br>• access token i dane finansowe tylko w pamięci; czyszczone przy wylogowaniu i po bezczynności<br>• preferencje w AsyncStorage; żadnych danych wrażliwych w logach<br>• zasłonięty podgląd w przełączniku aplikacji; na web tokeny tylko w pamięci                                                                                                                                                                                                                                                              | Z3                                           |
-| Co najmniej trzy uprawnienia systemowe (kamera, lokalizacja, pliki, BLE) | • **kamera** – skan kodu QR z żądaniem płatności (expo-camera)<br>• **lokalizacja** (tylko podczas używania) – najbliższe bankomaty (expo-location)<br>• **powiadomienia** – lokalne potwierdzenie wykonania przelewu (expo-notifications)<br>• o zgodę prosimy dopiero w chwili użycia funkcji; po odmowie aplikacja działa dalej                                                                                                                                                                                                                                                                         | Z4 (kamera), Z5 (lokalizacja, powiadomienia) |
-| Deep link lub universal link                                             | • universal / app link https://<domena>/pay/{id} (zapasowo sbank://pay/{id}) otwiera ekran potwierdzenia płatności<br>• link niesie wyłącznie identyfikator – kwotę i odbiorcę aplikacja pobiera z API; wymagane logowanie i jawne potwierdzenie<br>• drugi link: powrót z logowania OIDC, chroniony przez PKCE i parametr state                                                                                                                                                                                                                                                                           | Z4                                           |
-| WebView lub wczytywanie treści zewnętrznych                              | • regulamin i pomoc z własnej domeny w react-native-webview<br>• lista dozwolonych adresów, tylko HTTPS, wyłączony JavaScript i dostęp do plików, brak mostu JS–natywny<br>• linki zewnętrzne otwierane w przeglądarce systemowej; logowanie celowo NIE odbywa się w WebView                                                                                                                                                                                                                                                                                                                               | Z5                                           |
-| Biometria jako opcja odblokowania                                        | • expo-local-authentication: odblokowanie po uruchomieniu i po powrocie z tła<br>• refresh token w SecureStore jest związany z biometrią, więc samo ominięcie ekranu blokady nie daje sesji<br>• funkcja opcjonalna – zawsze dostępne jest pełne logowanie                                                                                                                                                                                                                                                                                                                                                 | Z4                                           |
+### 1. Sprawdzenie czy aplikacja jest uruchomiona (`GET /health`)
+**Żądanie:**
+```bash
+curl -i -X GET http://localhost:3000/health
+```
+**Odpowiedź (`200 OK`):**
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-11-11T21:57:56.684Z"
+}
+```
 
-### 5. Architektura
+### 2. Przeliczenie kwoty po aktualnym kursie NBP (`GET /public/convert`)
+**Żądanie:**
+```bash
+curl -X GET "http://localhost:3000/public/convert?amount=100&from=PLN&to=EUR"
+```
+**Odpowiedź (`200 OK`):**
+```json
+{
+  "amount": 100,
+  "fromCurrency": "PLN",
+  "toCurrency": "EUR",
+  "convertedAmount": 22.78,
+  "exchangeRate": 0.2278,
+  "effectiveDate": "2026-11-10"
+}
+```
 
-_Wymieńcie główne komponenty i połączenia między nimi. Wstępny szkic (zdjęcie z tablicy też się liczy) dołączcie do repozytorium – na zajęciach 2 zamienimy go w diagram przepływu danych._
-
-| Komponent                                                        | Technologia                                                                                                                                                                                                                                                                                                                             | Z czym się komunikuje                                                                                                                                         |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Aplikacja mobilna (i webowa)                                     | React Native + Expo (TypeScript), Expo Router, react-native-web, TanStack Query                                                                                                                                                                                                                                                         | • Keycloak – logowanie OIDC w przeglądarce systemowej (HTTPS)<br>• Backend API – HTTPS, nagłówek Bearer z access tokenem                                      |
-| Reverse proxy (dodatkowy komponent)                              | Caddy: TLS 1.3, certyfikaty Let’s Encrypt, weryfikacja certyfikatu klienta dla /partner                                                                                                                                                                                                                                                 | • przyjmuje cały ruch z internetu<br>• przekazuje go do API i Keycloak w sieci wewnętrznej                                                                    |
-| Backend / API                                                    | Node.js + TypeScript, NestJS; jose (JWT), CASL (polityki dostępu), class-validator, helmet, throttler; OpenAPI                                                                                                                                                                                                                          | • PostgreSQL (Prisma)<br>• Keycloak – pobranie kluczy publicznych (JWKS)<br>• SoftHSM – podpisy przez PKCS#11<br>• NBP Web API – kursy walut (HTTPS, z cache) |
-| Baza danych                                                      | PostgreSQL + Prisma (zapytania parametryzowane); osobna baza dla Keycloak                                                                                                                                                                                                                                                               | • wyłącznie backend, w sieci wewnętrznej Dockera<br>• brak dostępu z internetu                                                                                |
-| Usługi zewnętrzne (logowanie, płatności, mapy, analityka, push…) | • **Keycloak** (u nas) – OIDC, passkeys, role, step-up<br>• **SoftHSM2** (u nas) – magazyn kluczy PKCS#11<br>• **NBP Web API** – publiczne kursy walut, bez klucza<br>• **Mailpit** (u nas, środowisko testowe) – e-maile weryfikacyjne przy rejestracji<br>• Let’s Encrypt – certyfikaty serwera<br>• bez analityki i zewnętrznych SDK | • Keycloak: aplikacja i API<br>• SoftHSM: tylko backend<br>• NBP: tylko backend – aplikacja nie łączy się z nim bezpośrednio                                  |
-
-Całość uruchamiana jednym plikiem Docker Compose. Do pokazania passkeys i universal linków na telefonie potrzebna jest publiczna domena z HTTPS (mały VPS).
-
-### 6. Podział ról w zespole
-
-| Osoba       | Główna odpowiedzialność                                                     | Odpowiedzialność za bezpieczeństwo (obszar MASVS)                                                   |
-| ----------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| _⟨Osoba 1⟩_ | Aplikacja React Native: ekrany, nawigacja, wersja webowa                    | MASVS-STORAGE, MASVS-PLATFORM (deep linki, WebView, uprawnienia)                                    |
-| _⟨Osoba 2⟩_ | Backend API, baza danych, integracja z NBP, OpenAPI                         | Autoryzacja po stronie serwera (role i własność zasobu), MASVS-CODE (walidacja wejścia, zależności) |
-| _⟨Osoba 3⟩_ | Tożsamość: Keycloak, OIDC, passkeys, step-up, biometria                     | MASVS-AUTH                                                                                          |
-| _⟨Osoba 4⟩_ | Infrastruktura: Docker, Caddy, CA i mTLS, SoftHSM, CI, testy bezpieczeństwa | MASVS-NETWORK, MASVS-CRYPTO, MASVS-PRIVACY                                                          |
-
-### 7. Plan dojścia do MVP (zajęcia 5)
-
-| Zajęcia  | Co będzie gotowe                                                                                                                                                                                                                                                                   |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Z2       | Szkielet aplikacji, który się buduje; szkic architektury. Konkretnie: aplikacja Expo startuje na Androidzie i w przeglądarce, API odpowiada na /health, Docker Compose podnosi PostgreSQL i Keycloak, karta w README.                                                              |
-| Z3       | Rejestracja i logowanie OIDC z PKCE, role w tokenie; API weryfikuje JWT; rachunki i historia z kontrolą własności zasobu; refresh token w SecureStore; publiczny endpoint kursów NBP; pierwsze testy autoryzacji z kolumny „Czego NIE może”.                                       |
-| Z4       | Przelewy z limitem dziennym; passkey i step-up dla przelewów od 1 000 zł; odblokowanie biometrią; żądanie płatności przez deep link i kod QR (kamera); panel pracownika.                                                                                                           |
-| Z5 – MVP | Działająca aplikacja ze wszystkimi funkcjami z umowy (mogą być uproszczone). Dochodzą: API partnerskie z mTLS, WebView z regulaminem, bankomaty (lokalizacja), powiadomienia, panel administratora z dziennikiem audytowym, podpis potwierdzeń przez PKCS#11 w wersji podstawowej. |
-| Po MVP   | Pełny opis działania mechanizmów w repozytorium, komplet testów autoryzacji, przegląd według MASVS, poprawki po testach.                                                                                                                                                           |
-
-### 8. Największe ryzyko według sekcji
-
-_Co według was zagrożone jest w pierwszej kolejności i dlaczego? Wpiszcie 1–3 pozycje. Na koniec semestru sprawdzimy, czy mieliście rację._
-
-1. **Złamana kontrola dostępu do obiektów w API (BOLA / IDOR).** Klient podmienia identyfikator rachunku lub transakcji w żądaniu i czyta cudze dane albo zleca przelew z cudzego rachunku. To najbardziej prawdopodobny błąd, bo mamy cztery role, trzy strefy API i dane finansowe, a wystarczy jeden endpoint bez sprawdzenia właściciela. Ograniczamy to domyślną odmową, politykami w jednym miejscu i testami generowanymi z kolumny „Czego NIE może”.
-2. **Kradzież lub nadużycie tokenów i przechwycenie linków.** Refresh token na urządzeniu, tokeny w wersji webowej (XSS), przechwycenie powrotu z logowania OIDC przez inną aplikację oraz spreparowany link płatności z podmienioną kwotą. Ograniczamy to przez PKCE, bezpieczny magazyn związany z biometrią, krótkie życie tokenów z rotacją i linki niosące tylko identyfikator.
-3. **Błędna konfiguracja gotowych klocków.** Budujemy własne API z Keycloak, Caddy i HSM, więc ryzyko przenosi się z kodu na konfigurację, za którą w całości odpowiadamy: zbyt szerokie adresy przekierowań, tryb deweloperski i domyślne hasła, klucze prywatne w repozytorium, /partner dostępne z pominięciem mTLS, step-up egzekwowany tylko po stronie Keycloak. Dlatego API samo sprawdza poziom acr i odcisk certyfikatu, sekrety są poza repozytorium, a konfiguracja jest w kodzie i przechodzi przegląd.
-
-### Dodatek. Mechanizmy ochrony pokazywane w projekcie
-
-_Sekcja dodana przez nas – wymaganie projektu to minimum trzy mechanizmy zbudowane z gotowych, zaufanych bibliotek. Nie implementujemy własnej kryptografii ani własnych protokołów; szczegółowy opis działania każdego mechanizmu trafi do repozytorium._
-
-| Mechanizm                                              | Gdzie w aplikacji                                                                                    | Jak działa (skrót)                                                                                                                                                                                                                                                                                                                                                        | Gotowe klocki                                                                               |
-| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| **1. OpenID Connect** – Authorization Code + PKCE      | Logowanie w aplikacji mobilnej i webowej                                                             | Aplikacja losuje sekret (code_verifier) i wysyła do Keycloak jego skrót. Użytkownik loguje się na stronie Keycloak w przeglądarce systemowej. Aplikacja dostaje jednorazowy kod i wymienia go na tokeny, pokazując sekret – przechwycony kod jest bez niego bezużyteczny. API sprawdza podpis tokenu kluczem publicznym Keycloak.                                         | Keycloak, expo-auth-session, expo-web-browser, jose                                         |
-| **2. Passkeys (WebAuthn / FIDO2) + step-up**           | Logowanie bez hasła; potwierdzenie przelewu od 1 000 zł; obowiązkowe dla pracownika i administratora | Urządzenie tworzy parę kluczy przypisaną do domeny banku; serwer zna tylko klucz publiczny. Przy logowaniu urządzenie po biometrii podpisuje wyzwanie serwera – na fałszywej domenie podpis nie powstanie. Step-up: aplikacja prosi o wyższy poziom (acr_values), Keycloak wymaga passkey i wydaje token z acr=2, a API samo sprawdza poziom i świeżość uwierzytelnienia. | Keycloak (WebAuthn Passwordless, poziomy LoA w przepływie logowania)                        |
-| **3. mTLS + token związany z certyfikatem** (RFC 8705) | API partnerskie /partner                                                                             | W uzgadnianiu TLS certyfikat pokazuje także klient; Caddy przyjmuje tylko certyfikaty podpisane przez nasze CA. Keycloak wpisuje do tokenu odcisk certyfikatu (cnf), a API porównuje go z certyfikatem bieżącego połączenia – skradziony token bez klucza prywatnego jest bezużyteczny.                                                                                   | Caddy (client_auth), Keycloak (uwierzytelnianie klienta X.509), step-ca lub OpenSSL jako CA |
-| **4. PKCS#11 (HSM)**                                   | Podpis potwierdzeń przelewów                                                                         | Klucz prywatny powstaje wewnątrz tokenu SoftHSM jako nieeksportowalny. Backend otwiera sesję PKCS#11, przekazuje skrót potwierdzenia i odbiera podpis – klucz nigdy nie trafia do pamięci procesu ani na dysk. Potwierdzenie można zweryfikować kluczem publicznym z /public/keys. Sprzętowy HSM używa tego samego interfejsu.                                            | SoftHSM2, graphene-pk11 (pkcs11js)                                                          |
-| **5. Kontrola dostępu: role + własność zasobu**        | Każde wywołanie API                                                                                  | Domyślna odmowa. Role pochodzą z tokenu, a polityki zapisane są w jednym miejscu, np. „klient czyta rachunek, którego jest właścicielem”. Cudzy zasób zwraca 404, żeby nie zdradzać jego istnienia. Testy automatyczne odpowiadają wierszom kolumny „Czego NIE może”.                                                                                                     | NestJS Guards, CASL, role Keycloak, Jest + supertest                                        |
-| Uzupełniająco                                          | Urządzenie i przeglądarka                                                                            | Bezpieczny magazyn i biometria na urządzeniu; nagłówki bezpieczeństwa i CSP w wersji webowej; limit zapytań; walidacja wejścia.                                                                                                                                                                                                                                           | expo-secure-store, expo-local-authentication, helmet, @nestjs/throttler                     |
-
-Wybraliśmy OIDC zamiast SAML, bo jest projektowany pod aplikacje mobilne i API (tokeny JWT, PKCE).
-
-### Akceptacja prowadzącego
-
-| Data | Status                     | Uwagi |
-| ---- | -------------------------- | ----- |
-|      | zaakceptowano / do poprawy |       |
+### 3. Pobranie profilu, rachunków i historii operacji zalogowanego klienta (`GET /customers/me`)
+**Żądanie:**
+```bash
+curl -X GET http://localhost:3000/customers/me \
+  -H "x-user-id: client-1" \
+  -H "x-user-role: CLIENT"
+```
+**Odpowiedź (`200 OK`):**
+```json
+{
+  "id": "client-1",
+  "firstName": "Jan",
+  "lastName": "Kowalski",
+  "email": "jan.kowalski@example.com",
+  "customerNumber": "CUST-1001",
+  "accounts": [
+    {
+      "id": "e9ba1e61-dda3-46e4-84e8-efe9a3bb87ef",
+      "iban": "PL11102010260000140202736451",
+      "ownerId": "client-1",
+      "currency": "PLN",
+      "balance": 5000,
+      "dailyLimit": 2000,
+      "status": "ACTIVE",
+      "createdAt": "2026-11-11T21:57:44.280Z",
+      "updatedAt": "2026-11-11T21:57:44.280Z",
+      "dailyUsed": 250
+    },
+    {
+      "id": "57380ccc-877d-45e0-a162-525779fc79f6",
+      "iban": "PL22102010260000140202736452",
+      "ownerId": "client-1",
+      "currency": "EUR",
+      "balance": 1200.5,
+      "dailyLimit": 500,
+      "status": "ACTIVE",
+      "createdAt": "2026-11-11T21:57:44.283Z",
+      "updatedAt": "2026-11-11T21:57:44.283Z",
+      "dailyUsed": 0
+    }
+  ],
+  "transactions": [
+    {
+      "id": "a7b4ac9f-ec52-43e7-b3ce-dd2a01fc4629",
+      "operationNumber": "OP-SEED-001",
+      "senderAccountId": "e9ba1e61-dda3-46e4-84e8-efe9a3bb87ef",
+      "receiverAccountId": "2e8c80ff-150a-4f2a-9ea5-960496541a19",
+      "receiverIban": "PL99102010260000140202736451",
+      "receiverName": "Anna Nowak",
+      "amount": 250,
+      "currency": "PLN",
+      "title": "Initial seed transfer",
+      "status": "COMPLETED",
+      "createdAt": "2026-11-11T21:57:44.287Z",
+      "executedAt": "2026-11-11T21:57:44.286Z"
+    }
+  ]
+}
+```
