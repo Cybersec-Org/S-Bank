@@ -1,0 +1,12 @@
+# D4: Mapa kanałów wycieku (S-Bank)
+
+| Kanał | Dotyczy nas? | Co tam trafia teraz | Jak zamkniemy | Jak sprawdzimy |
+| :--- | :--- | :--- | :--- | :--- |
+| **Logi** | **Tak** | Nagłówki autoryzacyjne (`x-user-id`, `Authorization`) oraz dane kont i przelewów w konsoli | Wyłączenie logowania szczegółów żądań HTTP w trybie produkcyjnym (`!__DEV__`) i maskowanie nagłówków | Podpięcie `adb logcat` / konsoli i wykonanie przelewu (`POST /transfers`) |
+| **Kopia zapasowa** | **Tak** | Katalog danych aplikacji na urządzeniu | Ustawienie `allowBackup: false` w `app.config.ts` oraz `THIS_DEVICE_ONLY` w `expo-secure-store` | Weryfikacja manifestu aplikacji oraz próba wykonania `adb backup` |
+| **Zrzuty ekranu / przełącznik** | **Tak** | Ekran główny z saldem konta, historią transakcji i potwierdzeniem przelewu | Blokada zrzutów ekranu przez `expo-screen-capture` oraz zasłonięcie widoku przy przejściu aplikacji w tło | Próba wykonania zrzutu ekranu oraz podgląd kafelka w przełączniku aplikacji |
+| **Schowek** | **Tak** | Numer rachunku IBAN (`PL11...`) kopiowany przy zlecaniu przelewu | Ograniczenie automatycznego kopiowania i czyszczenie schowka po wklejeniu numeru rachunku | Skopiowanie numeru IBAN i sprawdzenie zawartości schowka systemowego |
+| **Klawiatura** | **Tak** | Nazwa odbiorcy (`receiverName`) i tytuł przelewu (`title`) zapamiętywane przez słownik klawiatury | Ustawienie `autoCorrect={false}` oraz `spellCheck={false}` na polach formularza przelewu | Wpisanie danych przelewu i sprawdzenie paska podpowiedzi klawiatury |
+| **Cache HTTP i WebView** | **Tak** | Odpowiedzi z endpointów `/accounts` oraz `/customers/me` w cache sieciowym (WebView nieużywany) | Brak trwałego cache'owania odpowiedzi finansowych na dysku (`Cache-Control: no-store`) | Inspekcja plików w katalogu `Cache/` aplikacji po zakończeniu sesji |
+| **Pliki tymczasowe** | **Nie** | Aplikacja nie generuje ani nie zapisuje żadnych plików na dysku | Brak zapisu plików (potwierdzenia przelewów wyświetlane wyłącznie na ekranie z danych w RAM) | Sprawdzenie katalogu `cache` i `files` w piaskownicy aplikacji |
+| **Powiadomienia** | **Nie** | Aplikacja nie wysyła powiadomień zewnętrznych z danymi wrażliwymi | Komunikaty o statusie przelewu (`COMPLETED` / `CANCELLED`) wyświetlane wyłącznie wewnątrz aplikacji | Wykonanie przelewu i weryfikacja braku danych finansowych na ekranie blokady |

@@ -1,0 +1,9 @@
+# D5: Polityka sesji — co znika i kiedy (S-Bank)
+
+| Zdarzenie | Co usuwamy | Gdzie (magazyn) | Co zostaje | Jak sprawdzimy |
+| :--- | :--- | :--- | :--- | :--- |
+| **Wylogowanie / zmiana roli** | Dane sesji z `expo-secure-store` oraz cały stan rachunków, przelewów i profilu klienta z pamięci podręcznej | Pamięć RAM (stan aplikacji), `expo-secure-store` | Preferencje UI oraz flaga pierwszego uruchomienia w `AsyncStorage` | Wylogowanie użytkownika -> stan rachunków jest czyszczony, aplikacja wraca do ekranu startowego |
+| **Reinstalacja** | Pozostałe w iOS Keychain dane sesyjne z poprzedniej instalacji | `expo-secure-store` (brak flagi `hasRunBefore` w `AsyncStorage` przy starcie wymusza wyczyszczenie `SecureStore`) | Brak (czysta instalacja) | Usunięcie i ponowna instalacja aplikacji -> poprzednia sesja nie jest przywracana |
+| **Wygaśnięcie sesji / błąd `401`** | Wygasłe poświadczenia sesji oraz dane finansowe z pamięci RAM | Pamięć RAM oraz `expo-secure-store` | Preferencje UI w `AsyncStorage` | Zwrócenie kodu `401 Unauthorized` przez API -> wyczyszczenie stanu i przekierowanie do logowania |
+| **Kopia zapasowa / nowe urządzenie** | Sesja nie jest przenoszona (`THIS_DEVICE_ONLY` w `SecureStore` oraz `allowBackup: false`) | `expo-secure-store` | Brak danych sesyjnych i finansowych na nowym urządzeniu | Odtworzenie aplikacji na nowym urządzeniu -> brak aktywnej sesji, wymagane nowe logowanie |
+| **Blokada konta / unieważnienie na serwerze** | Przy odrzuceniu żądania przez backend (np. zmiana statusu/uprawnień) aplikacja czyści pamięć RAM i kończy sesję | `expo-secure-store`, pamięć RAM | Preferencje UI w `AsyncStorage` | Zablokowanie dostępu po stronie backendu -> kolejne żądanie do API czyści lokalny stan sesji |
