@@ -138,6 +138,20 @@ export class AccountsService {
       });
     }
 
+      if (Number(dto.amount) >= 1000 && user.acr !== '2') {
+        await this.logSecurityIncident(
+          user,
+          'STEP_UP_REQUIRED',
+          senderAccount.id,
+          `Transfer of ${dto.amount} PLN requires Passkey step-up authentication (acr=2)`,
+        );
+        throw new ForbiddenException({
+          code: 'STEP_UP_REQUIRED',
+          message: 'Transfers of 1000 PLN or more require Passkey step-up confirmation (acr=2).',
+        });
+    }
+
+
     const ability = this.caslAbilityFactory.createForUser(user);
     const subject = CaslAbilityFactory.toAccountSubject(senderAccount);
     if (!ability.can(Action.Transfer, subject)) {
@@ -224,6 +238,19 @@ export class AccountsService {
 
     if (senderAccount.status !== 'ACTIVE') {
       throw new ForbiddenException({ code: 'ACCOUNT_BLOCKED', message: 'Account is blocked' });
+    }
+
+    if (Number(draft.amount) >= 1000 && user.acr !== '2') {
+      await this.logSecurityIncident(
+        user,
+        'STEP_UP_REQUIRED',
+        senderAccount.id,
+        `Transfer of ${draft.amount} PLN requires Passkey step-up authentication (acr=2)`,
+      );
+      throw new ForbiddenException({
+        code: 'STEP_UP_REQUIRED',
+        message: 'Transfers of 1000 PLN or more require Passkey step-up confirmation (acr=2).',
+      });
     }
 
     const amount = Number(draft.amount);

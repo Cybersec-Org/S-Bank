@@ -79,6 +79,15 @@
         "operationId": "AccountsController_findAll",
         "parameters": [
           {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "x-user-role",
             "in": "header",
             "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
@@ -113,6 +122,15 @@
         "operationId": "AccountsController_getAuditLogs",
         "parameters": [
           {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "x-user-role",
             "in": "header",
             "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
@@ -146,6 +164,15 @@
       "get": {
         "operationId": "AccountsController_findOne",
         "parameters": [
+          {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "x-user-role",
             "in": "header",
@@ -189,6 +216,15 @@
         "operationId": "AccountsController_getTransactions",
         "parameters": [
           {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "x-user-role",
             "in": "header",
             "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
@@ -230,6 +266,15 @@
       "patch": {
         "operationId": "AccountsController_updateLimit",
         "parameters": [
+          {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "x-user-role",
             "in": "header",
@@ -283,6 +328,15 @@
         "operationId": "AccountsController_updateStatus",
         "parameters": [
           {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "x-user-role",
             "in": "header",
             "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
@@ -335,6 +389,15 @@
         "operationId": "AccountsController_createTransferDraft",
         "parameters": [
           {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "x-user-role",
             "in": "header",
             "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
@@ -379,6 +442,15 @@
         "operationId": "AccountsController_confirmTransfer",
         "parameters": [
           {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "x-user-role",
             "in": "header",
             "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
@@ -420,6 +492,15 @@
       "post": {
         "operationId": "AccountsController_cancelTransfer",
         "parameters": [
+          {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "x-user-role",
             "in": "header",
@@ -463,6 +544,15 @@
         "operationId": "AccountsController_getMyProfile",
         "parameters": [
           {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "x-user-role",
             "in": "header",
             "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
@@ -496,6 +586,15 @@
       "get": {
         "operationId": "AccountsController_searchCustomers",
         "parameters": [
+          {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "x-user-role",
             "in": "header",
@@ -540,6 +639,15 @@
         "operationId": "AccountsController_getCustomer",
         "parameters": [
           {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "x-user-role",
             "in": "header",
             "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
@@ -574,6 +682,34 @@
         "summary": "Get customer details along with accounts and history",
         "tags": [
           "Banking API"
+        ]
+      }
+    },
+    "/api/payments/test": {
+      "get": {
+        "operationId": "PartnersController_getPayments",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Partners"
+        ]
+      }
+    },
+    "/api/reports/test": {
+      "get": {
+        "operationId": "PartnersController_getReports",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Partners"
         ]
       }
     }

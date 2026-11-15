@@ -8,4 +8,5 @@ export interface AuthenticatedUser {
   id: string;
   role: Role;
   ipAddress: string;
+  acr?: string;
 }

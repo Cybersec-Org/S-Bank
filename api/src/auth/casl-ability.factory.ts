@@ -46,6 +46,9 @@ export class CaslAbilityFactory {
       cannot(Action.Read, 'AuditLog');
     } else if (user.role === Role.CLIENT) {
       can(Action.Read, 'Account');
+      can(Action.Read, 'Customer');
+      can(Action.Update, 'Account');
+      can(Action.Transfer, 'Account');
       can(Action.Read, AccountSubject, { ownerId: user.id });
       can(Action.Update, AccountSubject, { ownerId: user.id, status: 'ACTIVE' });
       can(Action.Transfer, AccountSubject, { ownerId: user.id, status: 'ACTIVE' });
