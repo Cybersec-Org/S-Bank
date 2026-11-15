@@ -14,7 +14,7 @@ import { Role } from '../auth/interfaces/authenticated-user.interface.js';
 import { CreateTransactionDto } from './dto/create-transaction.dto.js';
 import { UpdateLimitDto } from './dto/update-limit.dto.js';
 import { UpdateStatusDto } from './dto/update-status.dto.js';
-
+import { SignatureService } from '../auth/signature.service.js';
 @Injectable()
 export class AccountsService {
   private readonly logger = new Logger(AccountsService.name);
@@ -22,6 +22,7 @@ export class AccountsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly caslAbilityFactory: CaslAbilityFactory,
+    private readonly signatureService: SignatureService,
   ) {}
 
   private async calculateDailyUsed(accountId: string): Promise<number> {
@@ -291,6 +292,18 @@ export class AccountsService {
       });
     });
 
+
+    const confirmationPayload = {
+      operationNumber: completed.operationNumber ?? operationNumber,
+      senderIban: senderAccount.iban,
+      receiverIban: completed.receiverIban,
+      amount: Number(completed.amount),
+      currency: completed.currency,
+      executedAt: (completed.executedAt ?? executedAt).toISOString(),
+    };
+
+    const signature = this.signatureService.signTransferConfirmation(confirmationPayload);
+
     return {
       id: completed.id,
       status: completed.status,
@@ -298,6 +311,8 @@ export class AccountsService {
       executedAt: completed.executedAt,
       amount: Number(completed.amount),
       currency: completed.currency,
+      signature,
+      confirmationPayload,
     };
   }
 

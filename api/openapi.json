@@ -74,6 +74,36 @@
         ]
       }
     },
+    "/public/keys": {
+      "get": {
+        "operationId": "PublicController_getPublicKeys",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get bank public key (PEM) for verifying transfer confirmations",
+        "tags": [
+          "Public"
+        ]
+      }
+    },
+    "/public/verify-confirmation": {
+      "post": {
+        "operationId": "PublicController_verifyConfirmation",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Verify cryptographic signature of a transfer confirmation",
+        "tags": [
+          "Public"
+        ]
+      }
+    },
     "/accounts": {
       "get": {
         "operationId": "AccountsController_findAll",
