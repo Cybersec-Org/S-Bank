@@ -717,20 +717,27 @@
   "info": {
     "title": "S-Bank API",
     "description": "",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "contact": {}
   },
   "tags": [],
   "servers": [],
   "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
     "schemas": {
       "UpdateLimitDto": {
         "type": "object",
         "properties": {
           "newLimit": {
             "type": "number",
-            "example": 2000,
-            "description": "New daily limit"
+            "example": 5000,
+            "description": "New daily limit in allowed range (100 - 50 000 PLN)"
           }
         },
         "required": [
@@ -765,7 +772,7 @@
           "receiverIban": {
             "type": "string",
             "example": "PL99102010260000140202736451",
-            "description": "Receiver IBAN"
+            "description": "Receiver IBAN (PL + 26 digits)"
           },
           "receiverName": {
             "type": "string",
@@ -775,7 +782,7 @@
           "amount": {
             "type": "number",
             "example": 150.5,
-            "description": "Amount to transfer"
+            "description": "Amount to transfer (max 2 decimal places)"
           },
           "title": {
             "type": "string",
@@ -784,7 +791,6 @@
           }
         },
         "required": [
-          "senderAccountId",
           "receiverIban",
           "receiverName",
           "amount",
