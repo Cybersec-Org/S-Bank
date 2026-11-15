@@ -6,11 +6,12 @@ import { PoliciesGuard } from '../auth/policies.guard.js';
 import { CreateTransactionDto } from './dto/create-transaction.dto.js';
 import { UpdateLimitDto } from './dto/update-limit.dto.js';
 import { UpdateStatusDto } from './dto/update-status.dto.js';
+import { UserAuthGuard } from '../auth/user-auth.guard.js';
 
 @ApiTags('Banking API')
 @ApiHeader({ name: 'x-user-id', description: 'User ID (e.g. client-1, emp-1, admin-1)', required: false })
 @ApiHeader({ name: 'x-user-role', description: 'User role (CLIENT, EMPLOYEE, ADMIN)', required: false })
-@UseGuards(MockAuthGuard, PoliciesGuard)
+@UseGuards(UserAuthGuard, PoliciesGuard)
 @Controller()
 export class AccountsController {
   constructor(private readonly accountsService: AccountsService) {}

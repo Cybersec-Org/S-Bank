@@ -576,6 +576,34 @@
           "Banking API"
         ]
       }
+    },
+    "/api/payments/test": {
+      "get": {
+        "operationId": "PartnersController_getPayments",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Partners"
+        ]
+      }
+    },
+    "/api/reports/test": {
+      "get": {
+        "operationId": "PartnersController_getReports",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Partners"
+        ]
+      }
     }
   },
   "info": {

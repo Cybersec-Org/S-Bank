@@ -4,6 +4,8 @@ import { MockAuthGuard } from './mock-auth.guard.js';
 import { PoliciesGuard } from './policies.guard.js';
 import { PartnerAuthGuard } from './partner-auth.guard.js';
 import { PartnerPermissionsGuard } from './partner-permissions.guard.js';
+import { JwtAuthGuard } from './jwt-auth.guard.js';
+import { UserAuthGuard } from './user-auth.guard.js';
 
 @Global()
 @Module({
@@ -13,6 +15,8 @@ import { PartnerPermissionsGuard } from './partner-permissions.guard.js';
     PoliciesGuard,
     PartnerAuthGuard,
     PartnerPermissionsGuard,
+    JwtAuthGuard,
+    UserAuthGuard,
   ],
   exports: [
     CaslAbilityFactory,
@@ -20,6 +24,8 @@ import { PartnerPermissionsGuard } from './partner-permissions.guard.js';
     PoliciesGuard,
     PartnerAuthGuard,
     PartnerPermissionsGuard,
+    JwtAuthGuard,
+    UserAuthGuard,
   ],
 })
 export class AuthModule {}
