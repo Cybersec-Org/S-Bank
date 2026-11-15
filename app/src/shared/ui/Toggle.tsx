@@ -37,7 +37,7 @@ export function Toggle({ label, hint, value, onValueChange, disabled = false }: 
         accessibilityRole="switch"
         accessibilityLabel={label}
         accessibilityState={{ checked: value, disabled }}
-        trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+        trackColor={{ true: theme.colors.primary, false: theme.colors.borderStrong }}
       />
     </View>
   );

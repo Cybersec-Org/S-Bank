@@ -1,0 +1,10 @@
+services:
+  caddy:
+    image: caddy:2
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./Caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddy/certs/ca.crt:/etc/caddy/certs/ca.crt:ro
+      - ./certs/server/server.crt:/etc/caddy/certs/server.crt:ro
+      - ./certs/server/server.key:/etc/caddy/certs/server.key:ro

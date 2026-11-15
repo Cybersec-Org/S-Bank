@@ -1,14 +1,17 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState, type ReactNode } from 'react';
+import { View } from 'react-native';
 
+import { useAccountsQuery } from '@/features/accounts';
 import { describeProblem } from '@/shared/api/problem';
 import { useSession } from '@/shared/auth/SessionProvider';
 import { useIsMockMode } from '@/shared/config/ApiModeProvider';
 import { pl } from '@/shared/i18n/pl';
 import { createIdempotencyKey } from '@/shared/lib/idempotency';
 import { isUuid } from '@/shared/lib/ids';
-import { formatIban } from '@/shared/lib/iban';
+import { formatIban, maskIban } from '@/shared/lib/iban';
 import { formatMoney } from '@/shared/lib/money';
+import { useGoBack } from '@/shared/navigation/useGoBack';
 import {
   AsyncBoundary,
   Banner,
@@ -17,9 +20,12 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  Icon,
   MoneyText,
   Screen,
+  StepUpPanel,
   Text,
+  useTheme,
 } from '@/shared/ui';
 
 import {
@@ -35,24 +41,28 @@ type Outcome =
   | { readonly kind: 'cancelled' };
 
 function SummaryRow({ label, children }: { readonly label: string; readonly children: ReactNode }) {
+  const theme = useTheme();
   return (
-    <Box gap="xs">
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: theme.spacing.lg }}>
       <Text variant="label" tone="muted">
         {label}
       </Text>
-      {children}
-    </Box>
+      <View style={{ flex: 1, minWidth: 0, alignItems: 'flex-end' }}>{children}</View>
+    </View>
   );
 }
 
 /** FR-05 / SR-03: shows the server-side draft, explains step-up when needed and confirms by draft id. */
 export function TransferConfirmScreen() {
   const router = useRouter();
+  const theme = useTheme();
+  const goBack = useGoBack('/transfer');
   const params = useLocalSearchParams<{ draftId?: string | string[] }>();
   const draftId = typeof params.draftId === 'string' ? params.draftId : null;
   const session = useSession();
   const isMock = useIsMockMode();
   const [outcome, setOutcome] = useState<Outcome>({ kind: 'reviewing' });
+  const accountsQuery = useAccountsQuery();
   const draftQuery = useTransferDraftQuery(draftId, outcome.kind === 'reviewing');
   const confirm = useConfirmTransferMutation();
   const cancel = useCancelTransferMutation();
@@ -66,7 +76,11 @@ export function TransferConfirmScreen() {
 
   if (!isUuid(draftId)) {
     return (
-      <Screen title={pl.transferConfirm.title}>
+      <Screen
+        title={pl.transferConfirm.title}
+        onBack={goBack}
+        backLabel={pl.transferConfirm.backLabel}
+      >
         <ErrorState message={pl.transferConfirm.invalidLink} />
         <Button label={pl.transferConfirm.done} onPress={goToDashboard} variant="secondary" />
       </Screen>
@@ -83,7 +97,7 @@ export function TransferConfirmScreen() {
           )}
         </Banner>
         <Text>{pl.transferConfirm.successReference(outcome.receipt.reference)}</Text>
-        <Button label={pl.transferConfirm.done} onPress={goToDashboard} />
+        <Button label={pl.transferConfirm.done} size="large" onPress={goToDashboard} fullWidth />
       </Screen>
     );
   }
@@ -102,10 +116,18 @@ export function TransferConfirmScreen() {
   }
 
   const stepUpSatisfied = draft === undefined || !draft.requiresStepUp || session.acr === '2';
+  // Without the real sign-in (B-10) a passkey confirmation can only be simulated in demo mode.
+  const canStepUp = isMock || stepUpSatisfied;
+  const sourceAccount = accountsQuery.data?.find(
+    (account) => account.id === draft?.sourceAccountId,
+  );
 
   function handleConfirm(): void {
     if (draft === undefined) {
       return;
+    }
+    if (!stepUpSatisfied) {
+      session.raiseMockAssurance();
     }
     // The same key is reused when the user retries after an error, so the bank can detect a duplicate.
     idempotencyKey.current ??= createIdempotencyKey();
@@ -123,7 +145,11 @@ export function TransferConfirmScreen() {
   }
 
   return (
-    <Screen title={pl.transferConfirm.title}>
+    <Screen
+      title={pl.transferConfirm.title}
+      onBack={goBack}
+      backLabel={pl.transferConfirm.backLabel}
+    >
       <AsyncBoundary
         isLoading={draftQuery.isPending}
         error={draftQuery.error}
@@ -132,55 +158,83 @@ export function TransferConfirmScreen() {
       >
         {draft === undefined ? null : (
           <Box gap="lg">
-            <Card gap="md">
-              <Text variant="heading">{pl.transferConfirm.summaryHeading}</Text>
-              <SummaryRow label={pl.transferConfirm.fromLabel}>
-                <Text>{draft.sourceAccountName}</Text>
-              </SummaryRow>
+            <Card gap="md" radius="large" padding="xl">
+              <View style={{ alignItems: 'center', gap: theme.spacing.xs }}>
+                <Text variant="label" tone="muted">
+                  {pl.transferConfirm.amountLabel}
+                </Text>
+                <MoneyText grosze={draft.amountGrosze} variant="amountConfirm" align="center" />
+              </View>
+              <View
+                style={{ height: theme.layout.borderWidth, backgroundColor: theme.colors.divider }}
+              />
               <SummaryRow label={pl.transferConfirm.toLabel}>
-                <Text>{draft.recipientName}</Text>
+                <Text variant="listTitle" align="right">
+                  {draft.recipientName}
+                </Text>
               </SummaryRow>
               <SummaryRow label={pl.transferConfirm.ibanLabel}>
                 {/* The full number is shown on purpose: the user must verify the recipient before confirming. */}
-                <Text tabular>{formatIban(draft.recipientIban)}</Text>
+                <Text variant="listTitle" tabular align="right">
+                  {formatIban(draft.recipientIban)}
+                </Text>
               </SummaryRow>
               <SummaryRow label={pl.transferConfirm.titleLabel}>
-                <Text>{draft.title}</Text>
+                <Text variant="listTitle" align="right">
+                  {draft.title}
+                </Text>
               </SummaryRow>
-              <SummaryRow label={pl.transferConfirm.amountLabel}>
-                <MoneyText grosze={draft.amountGrosze} variant="heading" />
+              <SummaryRow label={pl.transferConfirm.fromLabel}>
+                <Text variant="listTitle" align="right">
+                  {sourceAccount === undefined
+                    ? draft.sourceAccountName
+                    : pl.transferConfirm.fromValue(
+                        draft.sourceAccountName,
+                        maskIban(sourceAccount.iban),
+                      )}
+                </Text>
               </SummaryRow>
             </Card>
 
-            <Box gap="md">
-              {draft.requiresStepUp ? (
-                <Banner tone="warning" title={pl.transferConfirm.stepUpHeading}>
-                  {stepUpSatisfied ? pl.transferConfirm.stepUpDone : pl.transferConfirm.stepUpBody}
-                </Banner>
-              ) : null}
-              {draft.requiresStepUp && !stepUpSatisfied && isMock ? (
-                <Button
-                  label={pl.transferConfirm.stepUpMockButton}
-                  variant="secondary"
-                  onPress={session.raiseMockAssurance}
-                />
-              ) : null}
+            {draft.requiresStepUp ? (
+              <StepUpPanel title={pl.transferConfirm.stepUpHeading}>
+                {canStepUp ? pl.transferConfirm.stepUpBody : pl.transferConfirm.stepUpUnavailable}
+              </StepUpPanel>
+            ) : null}
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+              <Icon name="file" color={theme.colors.textMuted} size={22} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text variant="caption" tone="muted">
+                  {pl.transferConfirm.signedNote}
+                </Text>
+              </View>
+            </View>
+
+            <Box gap="sm">
               {confirm.error === null ? null : (
                 <Banner tone="danger">{describeProblem(confirm.error)}</Banner>
               )}
               <Button
                 label={
-                  confirm.isPending ? pl.transferConfirm.confirming : pl.transferConfirm.confirm
+                  confirm.isPending
+                    ? pl.transferConfirm.confirming
+                    : draft.requiresStepUp
+                      ? pl.transferConfirm.confirmWithPasskey
+                      : pl.transferConfirm.confirm
                 }
+                icon={draft.requiresStepUp ? 'key' : undefined}
+                size="large"
                 onPress={handleConfirm}
                 loading={confirm.isPending}
-                disabled={!stepUpSatisfied}
+                disabled={!canStepUp}
                 fullWidth
               />
               <Button
                 label={pl.transferConfirm.cancel}
                 onPress={handleCancel}
-                variant="secondary"
+                variant="ghost"
+                size="large"
                 disabled={confirm.isPending || cancel.isPending}
                 fullWidth
               />

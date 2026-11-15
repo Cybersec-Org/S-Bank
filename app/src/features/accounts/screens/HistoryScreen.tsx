@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { pl } from '@/shared/i18n/pl';
+import { useGoBack } from '@/shared/navigation/useGoBack';
 import { AsyncBoundary, Box, ChoiceGroup, Screen, Text, TextField } from '@/shared/ui';
 
 import { TransactionList } from '../components/TransactionList';
@@ -8,18 +9,20 @@ import { useAccountsQuery } from '../hooks/useAccountsQuery';
 import { useTransactionsQuery } from '../hooks/useTransactionsQuery';
 import { resolveHistoryFilter, type HistoryFilterInput } from '../model/history-filter';
 
-const DIRECTION_OPTIONS = [
+const CATEGORY_OPTIONS = [
   { value: 'all', label: pl.history.typeAll },
   { value: 'incoming', label: pl.history.typeIncoming },
   { value: 'outgoing', label: pl.history.typeOutgoing },
+  { value: 'payments', label: pl.history.typePayments },
 ] as const;
 
 /** FR-04: history of one account, filtered by date range and kind. */
 export function HistoryScreen() {
+  const goBack = useGoBack('/dashboard');
   const accountsQuery = useAccountsQuery();
   const accounts = accountsQuery.data ?? [];
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<HistoryFilterInput>({ from: '', to: '', direction: 'all' });
+  const [filter, setFilter] = useState<HistoryFilterInput>({ from: '', to: '', category: 'all' });
 
   const activeAccountId = selectedAccountId ?? accounts[0]?.id ?? null;
   const { query, errors } = useMemo(() => resolveHistoryFilter(filter), [filter]);
@@ -27,7 +30,7 @@ export function HistoryScreen() {
   const transactions = transactionsQuery.data ?? [];
 
   return (
-    <Screen title={pl.history.title}>
+    <Screen title={pl.history.title} onBack={goBack} backLabel={pl.history.backLabel}>
       {accounts.length > 1 && activeAccountId !== null ? (
         <ChoiceGroup
           label={pl.transfer.sourceLabel}
@@ -65,9 +68,9 @@ export function HistoryScreen() {
         />
         <ChoiceGroup
           label={pl.history.typeLabel}
-          value={filter.direction}
-          options={DIRECTION_OPTIONS}
-          onChange={(direction) => setFilter((current) => ({ ...current, direction }))}
+          value={filter.category}
+          options={CATEGORY_OPTIONS}
+          onChange={(category) => setFilter((current) => ({ ...current, category }))}
         />
       </Box>
 

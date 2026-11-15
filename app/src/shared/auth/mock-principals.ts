@@ -4,13 +4,13 @@ import type { Principal, Role } from './roles';
 export const MOCK_PRINCIPALS: Readonly<Record<Role, Principal>> = {
   customer: {
     subject: '00000000-0000-4000-8000-0000000000c1',
-    displayName: 'Anna Testowa',
+    displayName: 'Anna Nowak',
     roles: ['customer'],
     acr: '1',
   },
   employee: {
     subject: '00000000-0000-4000-8000-0000000000e1',
-    displayName: 'Jan Przykładowy',
+    displayName: 'Katarzyna Zielińska',
     roles: ['employee'],
     acr: '2',
   },

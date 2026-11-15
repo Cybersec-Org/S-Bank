@@ -3,7 +3,7 @@ export const MOCK_NOW_ISO = '2026-10-15T09:00:00.000Z';
 
 /** Valid (mod-97) but obviously fake Polish IBANs in a made-up bank range 1234 5678. */
 export const FAKE_IBANS = {
-  customerMain: 'PL96123456780000000000000001',
+  customerMain: 'PL33123456780000000000004821',
   customerSavings: 'PL69123456780000000000000002',
   recipientJan: 'PL42123456780000000000000003',
   recipientOffice: 'PL15123456780000000000000004',

@@ -11,9 +11,8 @@
 *.mobileprovision
 id_rsa*
 id_ed25519*
-infra/secrets/
-infra/softhsm/tokens/
-infra/certs/
+secrets/
+certs/
 
 # --- Dependencies ---------------------------------------------------------
 node_modules/

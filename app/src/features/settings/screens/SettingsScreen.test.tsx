@@ -12,7 +12,7 @@ describe('SettingsScreen', () => {
     await renderWithProviders(<SettingsScreen />, { signedInAs: 'customer' });
 
     expect(await screen.findByText('Telefon (MOCK)')).toBeOnTheScreen();
-    expect(screen.getByText(pl.settings.signedInAs('Anna Testowa'))).toBeOnTheScreen();
+    expect(screen.getByText(pl.settings.signedInAs('Anna Nowak'))).toBeOnTheScreen();
     expect(screen.getByRole('switch', { name: pl.settings.biometrics })).not.toBeChecked();
   });
 

@@ -5,42 +5,56 @@ import { ApiProblem } from '@/shared/api/problem';
 import { pl } from '@/shared/i18n/pl';
 import { renderWithProviders } from '@/shared/testing/renderWithProviders';
 
+import { DEMO_PAYMENT_REQUEST_ID } from '@/features/payments';
+
 import type { Account } from '../model/account';
 import { DashboardScreen } from './DashboardScreen';
 
 const NBSP = ' ';
 
 describe('DashboardScreen', () => {
-  it('shows the greeting, balance, limit usage and the last five operations', async () => {
+  it('shows the greeting, the balance card and the four operations of the design', async () => {
     await renderWithProviders(<DashboardScreen />, { signedInAs: 'customer' });
 
-    expect(await screen.findByText('Konto osobiste')).toBeOnTheScreen();
-    expect(screen.getByText(pl.dashboard.greeting('Anna Testowa'))).toBeOnTheScreen();
-    expect(screen.getByText(`12${NBSP}543,20${NBSP}zł`)).toBeOnTheScreen();
+    expect(await screen.findByText('Rachunek osobisty')).toBeOnTheScreen();
+    expect(screen.getByText(pl.dashboard.greeting)).toBeOnTheScreen();
+    expect(screen.getByText('Anna Nowak')).toBeOnTheScreen();
+    expect(screen.getByText(`4${NBSP}280,15${NBSP}zł`)).toBeOnTheScreen();
+    expect(screen.getByText(pl.dashboard.limitToday(`5${NBSP}000${NBSP}zł`))).toBeOnTheScreen();
+
+    expect(await screen.findByText('Wynagrodzenie')).toBeOnTheScreen();
+    expect(screen.getByText('Przelew przychodzący · 8 paź')).toBeOnTheScreen();
+    expect(screen.getByText(`+5${NBSP}400,00${NBSP}zł`)).toBeOnTheScreen();
+    expect(screen.getByText('Piekarnia Pod Lipą')).toBeOnTheScreen();
+    expect(screen.getByText('Płatność z kodu QR · 7 paź')).toBeOnTheScreen();
+    expect(screen.getByText(`\u221218,40${NBSP}zł`)).toBeOnTheScreen();
+    expect(screen.getByText('Marek Wiśniewski')).toBeOnTheScreen();
+    expect(screen.getByText(`+120,00${NBSP}zł`)).toBeOnTheScreen();
+    expect(screen.getByText('Sklep Rowerowy Szprycha')).toBeOnTheScreen();
+    expect(screen.getByText('Płatność z linku · 2 paź')).toBeOnTheScreen();
+    expect(screen.getByText(`\u2212249,00${NBSP}zł`)).toBeOnTheScreen();
+  });
+
+  it('shows the balance in euro at the NBP rate under the balance', async () => {
+    await renderWithProviders(<DashboardScreen />, { signedInAs: 'customer' });
+
     expect(
-      screen.getByText(
-        pl.dashboard.limitUsage(`1${NBSP}200,00${NBSP}zł`, `5${NBSP}000,00${NBSP}zł`),
-      ),
+      await screen.findByText(pl.dashboard.approxForeign(`977,45${NBSP}EUR`)),
     ).toBeOnTheScreen();
-    expect(await screen.findByText('Opłata za kurs')).toBeOnTheScreen();
-    expect(
-      screen.getAllByText(/Sklep Przykładowy|Szkoła Wzorcowa|Firma Testowa/).length,
-    ).toBeGreaterThan(0);
-    expect(screen.queryByText('Apteka')).not.toBeOnTheScreen();
   });
 
   it('never shows a full IBAN, only the masked one', async () => {
     await renderWithProviders(<DashboardScreen />, { signedInAs: 'customer' });
 
-    await screen.findByText('Konto osobiste');
+    await screen.findByText('Rachunek osobisty');
 
-    expect(screen.queryByText(/PL96/)).not.toBeOnTheScreen();
-    expect(screen.getAllByText(/PL•• •••• •••• •••• •••• •••• 0001/)).not.toHaveLength(0);
+    expect(screen.queryByText(/PL33/)).not.toBeOnTheScreen();
+    expect(screen.getByText('•••• 4821')).toBeOnTheScreen();
   });
 
   it('shows the mock badge in mock mode', async () => {
     await renderWithProviders(<DashboardScreen />, { signedInAs: 'customer' });
-    await screen.findByText('Konto osobiste');
+    await screen.findByText('Rachunek osobisty');
 
     expect(screen.getByLabelText(pl.common.mockBadge)).toBeOnTheScreen();
   });
@@ -86,20 +100,59 @@ describe('DashboardScreen', () => {
 
   it('opens the transfer form from the shortcut', async () => {
     await renderWithProviders(<DashboardScreen />, { signedInAs: 'customer' });
-    await screen.findByText('Konto osobiste');
+    await screen.findByText('Rachunek osobisty');
 
     await fireEvent.press(screen.getByRole('button', { name: pl.dashboard.shortcutTransfer }));
 
     expect(useRouter().push).toHaveBeenCalledWith('/transfer');
   });
 
-  it('offers the QR scanner, rates, ATMs and recipients shortcuts', async () => {
+  it('offers the four shortcuts of the design', async () => {
     await renderWithProviders(<DashboardScreen />, { signedInAs: 'customer' });
-    await screen.findByText('Konto osobiste');
+    await screen.findByText('Rachunek osobisty');
 
+    expect(screen.getByRole('button', { name: pl.dashboard.shortcutTransfer })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: pl.dashboard.shortcutScan })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: pl.dashboard.shortcutRates })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: pl.dashboard.shortcutAtms })).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: pl.dashboard.shortcutRecipients })).toBeOnTheScreen();
+  });
+
+  it('opens the demo payment request from "Skanuj QR" in mock mode, passing only an id', async () => {
+    await renderWithProviders(<DashboardScreen />, { signedInAs: 'customer' });
+    await screen.findByText('Rachunek osobisty');
+
+    await fireEvent.press(screen.getByRole('button', { name: pl.dashboard.shortcutScan }));
+
+    expect(useRouter().push).toHaveBeenCalledWith({
+      pathname: '/pay/[requestId]',
+      params: { requestId: DEMO_PAYMENT_REQUEST_ID, source: 'qr' },
+    });
+  });
+
+  it('opens the scanner screen instead in live mode', async () => {
+    await renderWithProviders(<DashboardScreen />, { signedInAs: 'customer', apiMode: 'live' });
+
+    await fireEvent.press(await screen.findByRole('button', { name: pl.dashboard.shortcutScan }));
+
+    expect(useRouter().push).toHaveBeenCalledWith('/scan');
+  });
+
+  it('links to the whole history', async () => {
+    await renderWithProviders(<DashboardScreen />, { signedInAs: 'customer' });
+    await screen.findByText('Rachunek osobisty');
+
+    await fireEvent.press(screen.getByRole('link', { name: pl.dashboard.allHistory }));
+
+    expect(useRouter().push).toHaveBeenCalledWith('/history');
+  });
+
+  it('locks the app: ends the session and returns to the login screen', async () => {
+    const { store } = await renderWithProviders(<DashboardScreen />, { signedInAs: 'customer' });
+    await screen.findByText('Rachunek osobisty');
+
+    await fireEvent.press(screen.getByRole('button', { name: pl.dashboard.lockApp }));
+
+    expect(store.getState().status).toBe('signedOut');
+    expect(useRouter().replace).toHaveBeenCalledWith('/');
   });
 });

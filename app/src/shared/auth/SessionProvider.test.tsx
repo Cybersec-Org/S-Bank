@@ -30,7 +30,7 @@ describe('useSession', () => {
   it('exposes the signed-in demo identity', async () => {
     await renderWithProviders(<Probe />, { signedInAs: 'customer' });
 
-    expect(screen.getByText('Anna Testowa')).toBeOnTheScreen();
+    expect(screen.getByText('Anna Nowak')).toBeOnTheScreen();
   });
 
   it('clears the query cache on sign out so no data outlives the session', async () => {

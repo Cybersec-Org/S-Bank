@@ -7,6 +7,7 @@ export interface LedgerAccountSnapshot {
 
 export interface OutgoingEntry {
   readonly accountId: string;
+  readonly kind: 'transfer' | 'qr_payment' | 'link_payment';
   readonly amountGrosze: number;
   readonly title: string;
   readonly counterpartyName: string;

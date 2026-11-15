@@ -20,15 +20,17 @@ export function MockBadge() {
       accessibilityHint={pl.common.mockBadgeHint}
       style={{
         alignSelf: 'flex-start',
-        backgroundColor: theme.colors.warningSurface,
-        borderColor: theme.colors.warning,
+        backgroundColor: theme.colors.warningBg,
+        borderColor: theme.colors.warningBg,
         borderWidth: theme.layout.borderWidth,
         borderRadius: theme.radii.pill,
         paddingHorizontal: theme.spacing.md,
         paddingVertical: theme.spacing.xs,
       }}
     >
-      <Text variant="caption">{pl.common.mockBadge}</Text>
+      <Text variant="caption" tone="warning">
+        {pl.common.mockBadge}
+      </Text>
     </View>
   );
 }
