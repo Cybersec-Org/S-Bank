@@ -4,8 +4,21 @@ const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 const dateFormat = new Intl.DateTimeFormat(LOCALE, {
   timeZone: BANK_TIME_ZONE,
-  day: '2-digit',
-  month: '2-digit',
+  day: 'numeric',
+  month: 'numeric',
+  year: 'numeric',
+});
+
+const dayMonthFormat = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: BANK_TIME_ZONE,
+  day: 'numeric',
+  month: 'short',
+});
+
+const longDateFormat = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: BANK_TIME_ZONE,
+  day: 'numeric',
+  month: 'long',
   year: 'numeric',
 });
 
@@ -34,9 +47,19 @@ export function isIsoDate(value: string): boolean {
   );
 }
 
-/** `15.10.2026` in the bank's time zone. */
+/** `8.10.2026` in the bank's time zone (tables). */
 export function formatDate(isoTimestamp: string): string {
   return dateFormat.format(new Date(isoTimestamp));
+}
+
+/** `8 paź` in the bank's time zone (lists). */
+export function formatDayMonth(isoTimestamp: string): string {
+  return dayMonthFormat.format(new Date(isoTimestamp)).replace('.', '');
+}
+
+/** `8 października 2026` in the bank's time zone (table captions). */
+export function formatLongDate(isoTimestamp: string): string {
+  return longDateFormat.format(new Date(isoTimestamp));
 }
 
 /** `15.10.2026, 11:30` in the bank's time zone. */

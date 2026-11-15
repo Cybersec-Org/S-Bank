@@ -7,28 +7,30 @@ import { createQueryClient } from '@/shared/api/query-client';
 import { SessionProvider } from '@/shared/auth/SessionProvider';
 import { ApiModeProvider } from '@/shared/config/ApiModeProvider';
 import { ErrorBoundary } from '@/shared/ErrorBoundary';
-import { ThemeProvider } from '@/shared/ui';
+import { FontGate, ThemeProvider } from '@/shared/ui';
 
 interface AppProvidersProps {
   readonly children: ReactNode;
 }
 
-/** SafeArea → theme → API mode → query cache → session → repositories → error boundary. */
+/** Fonts → safe area → theme → API mode → query cache → session → repositories → error boundary. */
 export function AppProviders({ children }: AppProvidersProps) {
   const [queryClient] = useState(createQueryClient);
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <ApiModeProvider>
-          <QueryClientProvider client={queryClient}>
-            <SessionProvider>
-              <RepositoriesProvider>
-                <ErrorBoundary>{children}</ErrorBoundary>
-              </RepositoriesProvider>
-            </SessionProvider>
-          </QueryClientProvider>
-        </ApiModeProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <FontGate>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <ApiModeProvider>
+            <QueryClientProvider client={queryClient}>
+              <SessionProvider>
+                <RepositoriesProvider>
+                  <ErrorBoundary>{children}</ErrorBoundary>
+                </RepositoriesProvider>
+              </SessionProvider>
+            </QueryClientProvider>
+          </ApiModeProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </FontGate>
   );
 }

@@ -3,15 +3,29 @@ import { Text as NativeText, type TextProps as NativeTextProps } from 'react-nat
 import { useTheme } from './ThemeProvider';
 import type { ColorTokens, TypographyKey } from './theme';
 
-export type TextTone = 'default' | 'muted' | 'accent' | 'danger' | 'success' | 'inverse';
+export type TextTone =
+  | 'default'
+  | 'muted'
+  | 'accent'
+  | 'danger'
+  | 'success'
+  | 'warning'
+  | 'disabled'
+  | 'inverse'
+  | 'inverseMuted'
+  | 'onSoft';
 
 const TONE_COLOR: Readonly<Record<TextTone, keyof ColorTokens>> = {
   default: 'text',
   muted: 'textMuted',
-  accent: 'accent',
+  accent: 'primary',
   danger: 'danger',
-  success: 'success',
-  inverse: 'textOnAccent',
+  success: 'primary',
+  warning: 'warningText',
+  disabled: 'textDisabled',
+  inverse: 'onPrimary',
+  inverseMuted: 'onPrimaryMuted',
+  onSoft: 'onPrimarySoft',
 };
 
 interface TextProps extends Omit<NativeTextProps, 'style'> {
@@ -22,7 +36,7 @@ interface TextProps extends Omit<NativeTextProps, 'style'> {
   readonly tabular?: boolean;
 }
 
-const HEADING_VARIANTS: ReadonlySet<TypographyKey> = new Set(['title', 'heading']);
+const HEADING_VARIANTS: ReadonlySet<TypographyKey> = new Set(['title', 'screenTitle', 'heading']);
 
 export function Text({
   variant = 'body',

@@ -7,7 +7,9 @@ import { createMockRepositories, type Repositories } from '@/shared/api/reposito
 import { SessionProvider } from '@/shared/auth/SessionProvider';
 import { createSessionStore, type SessionStore } from '@/shared/auth/session-store';
 import type { Role } from '@/shared/auth/roles';
+import { MOCK_NOW_ISO } from '@/shared/api/mock/mock-data';
 import { ApiModeProvider } from '@/shared/config/ApiModeProvider';
+import { ClockProvider } from '@/shared/config/ClockProvider';
 import type { ApiMode } from '@/shared/config/env';
 import { ThemeProvider } from '@/shared/ui';
 
@@ -24,7 +26,10 @@ interface RenderOptions {
   readonly arrange?: (repositories: Repositories) => Promise<void>;
 }
 
-const NO_LATENCY: Partial<MockOptions> = { latencyMs: 0 };
+/** Tests run without latency and on the fixed demo clock, so dates and expiries never drift. */
+const TEST_DEFAULTS: Partial<MockOptions> = { latencyMs: 0, now: () => new Date(MOCK_NOW_ISO) };
+
+const TEST_CLOCK = (): Date => new Date(MOCK_NOW_ISO);
 
 const createdQueryClients: QueryClient[] = [];
 
@@ -65,7 +70,7 @@ export async function renderWithProviders(ui: ReactElement, options: RenderOptio
       const state = store.getState();
       return state.status === 'signedIn' ? state.principal.acr : '1';
     },
-    { ...NO_LATENCY, ...options.mockOptions },
+    { ...TEST_DEFAULTS, ...options.mockOptions },
   );
   const repositories = options.repositories === undefined ? base : options.repositories(base);
   await options.arrange?.(repositories);
@@ -77,13 +82,15 @@ export async function renderWithProviders(ui: ReactElement, options: RenderOptio
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <ThemeProvider scheme="light">
-        <ApiModeProvider mode={apiMode}>
-          <QueryClientProvider client={queryClient}>
-            <SessionProvider store={store}>
-              <RepositoriesProvider repositories={repositories}>{children}</RepositoriesProvider>
-            </SessionProvider>
-          </QueryClientProvider>
-        </ApiModeProvider>
+        <ClockProvider clock={options.mockOptions?.now ?? TEST_CLOCK}>
+          <ApiModeProvider mode={apiMode}>
+            <QueryClientProvider client={queryClient}>
+              <SessionProvider store={store}>
+                <RepositoriesProvider repositories={repositories}>{children}</RepositoriesProvider>
+              </SessionProvider>
+            </QueryClientProvider>
+          </ApiModeProvider>
+        </ClockProvider>
       </ThemeProvider>
     );
   }

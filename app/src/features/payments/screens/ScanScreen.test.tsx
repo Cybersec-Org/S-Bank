@@ -26,7 +26,7 @@ describe('ScanScreen', () => {
 
     expect(useRouter().push).toHaveBeenCalledWith({
       pathname: '/pay/[requestId]',
-      params: { requestId: MOCK_PENDING_PAYMENT_REQUEST_ID },
+      params: { requestId: MOCK_PENDING_PAYMENT_REQUEST_ID, source: 'qr' },
     });
   });
 
