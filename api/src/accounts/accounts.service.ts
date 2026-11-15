@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import {
   Injectable,
   NotFoundException,
@@ -23,7 +24,6 @@ export class AccountsService {
     private readonly caslAbilityFactory: CaslAbilityFactory,
   ) {}
 
-  // Helper method to calculate daily spent amount for an account
   private async calculateDailyUsed(accountId: string): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -82,7 +82,12 @@ export class AccountsService {
 
     if (!ability.can(Action.Read, subject)) {
       await this.logSecurityIncident(user, 'BOLA_READ_ATTEMPT', accountId, 'Unauthorized attempt to read account');
-      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'You do not have permission to view this account' });
+      // Zwracamy 404, aby nie zdradzać istnienia cudzego zasobu
+      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' });
+    }
+
+    if (user.role === Role.EMPLOYEE) {
+      await this.logSecurityIncident(user, 'EMPLOYEE_ACCOUNT_VIEW', accountId, 'Employee viewed customer account');
     }
 
     return this.serializeAccount(account);
@@ -108,17 +113,22 @@ export class AccountsService {
   // ==================== TWO-STEP TRANSFER SYSTEM ====================
 
   async createTransferDraft(dto: CreateTransactionDto, user: AuthenticatedUser) {
-    let senderAccount = dto.senderAccountId
+    const senderAccount = dto.senderAccountId
       ? await this.prisma.account.findUnique({ where: { id: dto.senderAccountId } })
       : await this.prisma.account.findFirst({ where: { ownerId: user.id, currency: 'PLN' } });
 
     if (!senderAccount) {
-      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Sender account not found' });
+      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' });
     }
 
-    if (user.role === Role.CLIENT && senderAccount.ownerId !== user.id) {
-      await this.logSecurityIncident(user, 'UNAUTHORIZED_TRANSFER_ATTEMPT', senderAccount.id, 'Not account owner');
-      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'You are not the owner of this account' });
+    if (user.role !== Role.CLIENT) {
+      await this.logSecurityIncident(user, 'ROLE_TRANSFER_FORBIDDEN', senderAccount.id, 'Non-client tried to initiate transfer');
+      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Only clients can initiate transfers' });
+    }
+
+    if (senderAccount.ownerId !== user.id) {
+      await this.logSecurityIncident(user, 'BOLA_TRANSFER_ATTEMPT', senderAccount.id, 'Not account owner');
+      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' });
     }
 
     if (senderAccount.status !== 'ACTIVE') {
@@ -126,6 +136,13 @@ export class AccountsService {
         code: 'ACCOUNT_BLOCKED',
         message: 'Account is frozen or closed. Cannot initiate transfer.',
       });
+    }
+
+    const ability = this.caslAbilityFactory.createForUser(user);
+    const subject = CaslAbilityFactory.toAccountSubject(senderAccount);
+    if (!ability.can(Action.Transfer, subject)) {
+      await this.logSecurityIncident(user, 'UNAUTHORIZED_TRANSFER_ATTEMPT', senderAccount.id, 'CASL transfer check failed');
+      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Cannot initiate transfer from this account' });
     }
 
     const receiverAccount = await this.prisma.account.findUnique({
@@ -200,8 +217,9 @@ export class AccountsService {
 
     const senderAccount = draft.senderAccount;
 
-    if (user.role === Role.CLIENT && senderAccount.ownerId !== user.id) {
-      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Unauthorized transfer confirmation attempt' });
+    if (user.role !== Role.CLIENT || senderAccount.ownerId !== user.id) {
+      await this.logSecurityIncident(user, 'BOLA_CONFIRM_ATTEMPT', transferId, 'Unauthorized transfer confirmation attempt');
+      throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer draft not found or already processed' });
     }
 
     if (senderAccount.status !== 'ACTIVE') {
@@ -219,7 +237,8 @@ export class AccountsService {
       throw new UnprocessableEntityException({ code: 'DAILY_LIMIT_EXCEEDED', message: 'Daily limit exceeded' });
     }
 
-    const operationNumber = `OP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    // Kryptograficznie bezpieczny generator CSPRNG zamiast Math.random()
+    const operationNumber = `OP-${Date.now()}-${randomInt(1000, 10000)}`;
     const executedAt = new Date();
 
     const completed = await this.prisma.$transaction(async (tx) => {
@@ -265,8 +284,9 @@ export class AccountsService {
       throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer draft not found or already processed' });
     }
 
-    if (user.role === Role.CLIENT && draft.senderAccount.ownerId !== user.id) {
-      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Unauthorized cancellation attempt' });
+    if (user.role !== Role.CLIENT || draft.senderAccount.ownerId !== user.id) {
+      await this.logSecurityIncident(user, 'BOLA_CANCEL_ATTEMPT', transferId, 'Unauthorized cancellation attempt');
+      throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer draft not found or already processed' });
     }
 
     const cancelled = await this.prisma.transaction.update({
@@ -285,6 +305,11 @@ export class AccountsService {
   async updateLimitAuthorized(accountId: string, dto: UpdateLimitDto, user: AuthenticatedUser) {
     const account = await this.prisma.account.findUnique({ where: { id: accountId }, include: { owner: true } });
     if (!account) throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' });
+
+    if (user.role === Role.CLIENT && account.ownerId !== user.id) {
+      await this.logSecurityIncident(user, 'BOLA_LIMIT_CHANGE', accountId, 'Client tried to update another user limit');
+      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' });
+    }
 
     const ability = this.caslAbilityFactory.createForUser(user);
     const subject = CaslAbilityFactory.toAccountSubject(account);
@@ -359,7 +384,8 @@ export class AccountsService {
 
   async getCustomerDetails(customerId: string, user: AuthenticatedUser) {
     if (user.role === Role.CLIENT && user.id !== customerId) {
-      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Cannot view other customer profile' });
+      await this.logSecurityIncident(user, 'BOLA_CUSTOMER_READ', customerId, 'Client tried to view another customer profile');
+      throw new NotFoundException({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer not found' });
     }
 
     const customer = await this.prisma.customer.findUnique({
@@ -369,6 +395,10 @@ export class AccountsService {
 
     if (!customer) {
       throw new NotFoundException({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer not found' });
+    }
+
+    if (user.role === Role.EMPLOYEE) {
+      await this.logSecurityIncident(user, 'EMPLOYEE_CUSTOMER_VIEW', customerId, 'Employee viewed customer profile');
     }
 
     const serializedAccounts = await Promise.all(
@@ -403,6 +433,7 @@ export class AccountsService {
 
   async getAuditLogs(user: AuthenticatedUser) {
     if (user.role !== Role.ADMIN) {
+      await this.logSecurityIncident(user, 'UNAUTHORIZED_AUDIT_READ', 'AuditLog', 'Non-admin tried to read audit logs');
       throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Only admins can view audit logs' });
     }
     return this.prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' } });
@@ -411,7 +442,14 @@ export class AccountsService {
   private async logSecurityIncident(user: AuthenticatedUser, action: string, resourceId: string, reason: string) {
     this.logger.warn(`SECURITY INCIDENT [${action}]: User ${user.id} (${user.role}) -> Resource ${resourceId}. Reason: ${reason}`);
     await this.prisma.auditLog.create({
-      data: { userId: user.id, userRole: user.role, action, resourceId, ipAddress: user.ipAddress, reason },
+      data: {
+        userId: user.id,
+        userRole: user.role,
+        action,
+        resourceId,
+        ipAddress: user.ipAddress ?? '127.0.0.1',
+        reason,
+      },
     });
   }
 }
