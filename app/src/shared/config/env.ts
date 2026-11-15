@@ -3,8 +3,8 @@ import { z } from 'zod';
 export const API_MODES = ['mock', 'live'] as const;
 export type ApiMode = (typeof API_MODES)[number];
 
-const DEFAULT_API_BASE_URL = 'https://localhost';
-const DEFAULT_OIDC_ISSUER_URL = 'https://localhost/auth/realms/sbank';
+const DEFAULT_API_BASE_URL = 'https://localhost:3000';
+const DEFAULT_OIDC_ISSUER_URL = 'https://localhost:8080/auth/realms/sbank';
 const DEFAULT_OIDC_CLIENT_ID = 'sbank-app';
 
 const rawEnvSchema = z.object({
