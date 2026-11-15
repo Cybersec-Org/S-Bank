@@ -1,17 +1,15 @@
+
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Cleaning database...');
-  await prisma.auditLog.deleteMany();
-  await prisma.transaction.deleteMany();
-  await prisma.account.deleteMany();
-  await prisma.customer.deleteMany();
+  console.log('Creating demo customers...');
 
-  console.log('Creating customers...');
-  await prisma.customer.create({
-    data: {
+  await prisma.customer.upsert({
+    where: { id: 'client-1' },
+    update: {},
+    create: {
       id: 'client-1',
       firstName: 'Jan',
       lastName: 'Kowalski',
@@ -20,8 +18,10 @@ async function main() {
     },
   });
 
-  await prisma.customer.create({
-    data: {
+  await prisma.customer.upsert({
+    where: { id: 'client-2' },
+    update: {},
+    create: {
       id: 'client-2',
       firstName: 'Anna',
       lastName: 'Nowak',
@@ -30,9 +30,12 @@ async function main() {
     },
   });
 
-  console.log('Creating bank accounts...');
-  const acc1 = await prisma.account.create({
-    data: {
+  console.log('Creating demo bank accounts...');
+
+  const acc1 = await prisma.account.upsert({
+    where: { iban: 'PL11102010260000140202736451' },
+    update: {},
+    create: {
       iban: 'PL11102010260000140202736451',
       ownerId: 'client-1',
       currency: 'PLN',
@@ -42,8 +45,10 @@ async function main() {
     },
   });
 
-  await prisma.account.create({
-    data: {
+  await prisma.account.upsert({
+    where: { iban: 'PL22102010260000140202736452' },
+    update: {},
+    create: {
       iban: 'PL22102010260000140202736452',
       ownerId: 'client-1',
       currency: 'EUR',
@@ -53,8 +58,10 @@ async function main() {
     },
   });
 
-  const acc2 = await prisma.account.create({
-    data: {
+  const acc2 = await prisma.account.upsert({
+    where: { iban: 'PL99102010260000140202736451' },
+    update: {},
+    create: {
       iban: 'PL99102010260000140202736451',
       ownerId: 'client-2',
       currency: 'PLN',
@@ -65,8 +72,11 @@ async function main() {
   });
 
   console.log('Creating initial transaction...');
-  await prisma.transaction.create({
-    data: {
+
+  await prisma.transaction.upsert({
+    where: { operationNumber: 'OP-SEED-001' },
+    update: {},
+    create: {
       operationNumber: 'OP-SEED-001',
       senderAccountId: acc1.id,
       receiverAccountId: acc2.id,
@@ -86,8 +96,9 @@ async function main() {
 main()
   .catch((e) => {
     console.error(e);
-    process.exit(1);
+    process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();
   });
+

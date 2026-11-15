@@ -12,6 +12,7 @@ datasource db {
 
 model Customer {
   id             String    @id
+  keycloakSub    String?   @unique
   firstName      String
   lastName       String
   email          String    @unique
