@@ -24,7 +24,16 @@ export class AccountSubject {
   status!: string;
 }
 
-export type Subjects = InferSubjects<typeof AccountSubject> | 'Account' | 'AuditLog' | 'Customer' | 'all';
+export type Subjects =
+  | InferSubjects<typeof AccountSubject>
+  | 'Account'
+  | 'AuditLog'
+  | 'Customer'
+  | 'Recipient'
+  | 'PaymentRequest'
+  | 'SystemConfig'
+  | 'all';
+
 export type AppSubjects = Subjects;
 export type AppAbility = MongoAbility<[Action, Subjects]>;
 
@@ -46,10 +55,15 @@ export class CaslAbilityFactory {
       can(Action.Read, 'Customer');
       cannot(Action.Transfer, 'all');
       cannot(Action.Read, 'AuditLog');
+      cannot(Action.Manage, 'SystemConfig');
     } else if (user.role === Role.CLIENT) {
       can(Action.Read, 'Account');
       can(Action.Read, 'Customer');
       can(Action.Transfer, 'Account');
+      can(Action.Read, 'Recipient');
+      can(Action.Create, 'Recipient');
+      can(Action.Delete, 'Recipient');
+      can(Action.Read, 'PaymentRequest');
       can(Action.Read, AccountSubject, { ownerId: user.id });
       can(Action.Transfer, AccountSubject, { ownerId: user.id, status: 'ACTIVE' });
       cannot(Action.Update, 'all');

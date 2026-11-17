@@ -8,5 +8,8 @@ export interface AuthenticatedUser {
   id: string;
   role: Role;
   ipAddress: string;
-  acr?: string;
+  acr?: string | undefined;
+  email?: string | undefined;
+  firstName?: string | undefined;
+  lastName?: string | undefined;
 }

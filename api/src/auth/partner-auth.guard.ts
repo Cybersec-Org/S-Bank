@@ -13,11 +13,13 @@ import {
 const PARTNERS: Record<string, AuthenticatedPartner> = {
   [PartnerId.PARTNER1]: {
     id: PartnerId.PARTNER1,
-    permissions: ['payments:read'],
+    permissions: ['payments:read', 'payments:create'],
+    expectedCertThumbprint: process.env['PARTNER1_CERT_SHA256'] ?? 'partner1-cert-sha256',
   },
   [PartnerId.PARTNER2]: {
     id: PartnerId.PARTNER2,
-    permissions: ['reports:read'],
+    permissions: ['reports:read', 'payments:read', 'payments:create'],
+    expectedCertThumbprint: process.env['PARTNER2_CERT_SHA256'] ?? 'partner2-cert-sha256',
   },
 };
 
@@ -36,6 +38,17 @@ export class PartnerAuthGuard implements CanActivate {
 
     if (!partner) {
       throw new UnauthorizedException('Unknown partner');
+    }
+
+    const certThumbprint = request.headers['x-client-cert-sha256'];
+    if (
+      typeof certThumbprint === 'string' &&
+      partner.expectedCertThumbprint &&
+      certThumbprint.trim() !== partner.expectedCertThumbprint
+    ) {
+      throw new UnauthorizedException(
+        'Certificate thumbprint mismatch (RFC 8705 mTLS binding failed)',
+      );
     }
 
     request.partner = partner;

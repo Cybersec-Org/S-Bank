@@ -40,6 +40,26 @@ export class PublicController {
     return this.publicService.convertCurrency(amount, from, to);
   }
 
+  @Get('atms')
+  @ApiOperation({
+    summary: 'Get ATM locations for map display and local GPS sorting (OpenStreetMap Overpass API)',
+  })
+  @ApiQuery({
+    name: 'city',
+    required: false,
+    example: 'Katowice',
+    description: 'Optional city name (e.g. Katowice, Dąbrowa Górnicza, Gliwice, Warszawa, Kraków)',
+  })
+  async getAtms(@Query('city') city?: string) {
+    return this.publicService.getAtms(city);
+  }
+
+  @Get('terms')
+  @ApiOperation({ summary: 'Get static HTML terms and conditions for secure WebView' })
+  getTerms() {
+    return this.publicService.getTerms();
+  }
+
   @Get('keys')
   @ApiOperation({ summary: 'Get bank public key (PEM) for verifying transfer confirmations' })
   getPublicKeys() {

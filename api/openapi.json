@@ -74,6 +74,47 @@
         ]
       }
     },
+    "/public/atms": {
+      "get": {
+        "operationId": "PublicController_getAtms",
+        "parameters": [
+          {
+            "name": "city",
+            "required": false,
+            "in": "query",
+            "description": "Optional city name (e.g. Katowice, Dąbrowa Górnicza, Gliwice, Warszawa, Kraków)",
+            "schema": {
+              "example": "Katowice",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get ATM locations for map display and local GPS sorting (OpenStreetMap Overpass API)",
+        "tags": [
+          "Public"
+        ]
+      }
+    },
+    "/public/terms": {
+      "get": {
+        "operationId": "PublicController_getTerms",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get static HTML terms and conditions for secure WebView",
+        "tags": [
+          "Public"
+        ]
+      }
+    },
     "/public/keys": {
       "get": {
         "operationId": "PublicController_getPublicKeys",
@@ -141,7 +182,7 @@
             "description": ""
           }
         },
-        "summary": "Get list of accounts (includes dailyUsed and owner details)",
+        "summary": "Get list of accounts (includes dailyUsed and auto-provisions OIDC demo account)",
         "tags": [
           "Banking API"
         ]
@@ -185,6 +226,100 @@
           }
         },
         "summary": "Get security audit logs (Admin only)",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/admin/config": {
+      "get": {
+        "operationId": "AccountsController_getSystemConfig",
+        "parameters": [
+          {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get global security parameters (Admin only)",
+        "tags": [
+          "Banking API"
+        ]
+      },
+      "patch": {
+        "operationId": "AccountsController_updateSystemConfig",
+        "parameters": [
+          {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSystemConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update global step-up threshold and daily limit range (Admin only)",
         "tags": [
           "Banking API"
         ]
@@ -347,7 +482,7 @@
             "description": ""
           }
         },
-        "summary": "Update account daily limit (Client or Employee)",
+        "summary": "Update account daily limit (Employee or Admin only)",
         "tags": [
           "Banking API"
         ]
@@ -512,7 +647,7 @@
             "description": ""
           }
         },
-        "summary": "Step 2: Confirm and execute transfer",
+        "summary": "Step 2: Confirm, execute and sign transfer",
         "tags": [
           "Banking API"
         ]
@@ -564,6 +699,253 @@
           }
         },
         "summary": "Step 2 (Alternative): Cancel transfer draft",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/recipients": {
+      "get": {
+        "operationId": "AccountsController_getRecipients",
+        "parameters": [
+          {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get logged-in client saved recipients",
+        "tags": [
+          "Banking API"
+        ]
+      },
+      "post": {
+        "operationId": "AccountsController_createRecipient",
+        "parameters": [
+          {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRecipientDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Add a new saved recipient",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/recipients/{id}": {
+      "delete": {
+        "operationId": "AccountsController_deleteRecipient",
+        "parameters": [
+          {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete saved recipient (BOLA 404 protected)",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/payment-requests/{id}": {
+      "get": {
+        "operationId": "AccountsController_getPaymentRequest",
+        "parameters": [
+          {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get payment request details for QR code or deep link sbank://pay/{id}",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/payment-requests/{id}/pay": {
+      "post": {
+        "operationId": "AccountsController_payPaymentRequest",
+        "parameters": [
+          {
+            "name": "x-user-acr",
+            "in": "header",
+            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-role",
+            "in": "header",
+            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "description": "User ID (e.g. client-1, emp-1, admin-1)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Confirm and pay a QR / deep link payment request",
         "tags": [
           "Banking API"
         ]
@@ -718,28 +1100,154 @@
     "/api/payments/test": {
       "get": {
         "operationId": "PartnersController_getPayments",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-client-cert-sha256",
+            "in": "header",
+            "description": "Optional mTLS certificate thumbprint (RFC 8705)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-partner-id",
+            "in": "header",
+            "description": "Partner ID (partner1, partner2)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
           }
         },
+        "summary": "Test endpoint for partner1 payments:read permission",
         "tags": [
-          "Partners"
+          "Partner mTLS API"
         ]
       }
     },
     "/api/reports/test": {
       "get": {
         "operationId": "PartnersController_getReports",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-client-cert-sha256",
+            "in": "header",
+            "description": "Optional mTLS certificate thumbprint (RFC 8705)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-partner-id",
+            "in": "header",
+            "description": "Partner ID (partner1, partner2)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
           }
         },
+        "summary": "Test endpoint for partner2 reports:read permission",
         "tags": [
-          "Partners"
+          "Partner mTLS API"
+        ]
+      }
+    },
+    "/api/payment-requests": {
+      "post": {
+        "operationId": "PartnersController_createPaymentRequest",
+        "parameters": [
+          {
+            "name": "x-client-cert-sha256",
+            "in": "header",
+            "description": "Optional mTLS certificate thumbprint (RFC 8705)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-partner-id",
+            "in": "header",
+            "description": "Partner ID (partner1, partner2)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePaymentRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create a payment request for QR code / deep link sbank://pay/{id}",
+        "tags": [
+          "Partner mTLS API"
+        ]
+      }
+    },
+    "/api/payment-requests/{id}": {
+      "get": {
+        "operationId": "PartnersController_getPaymentRequest",
+        "parameters": [
+          {
+            "name": "x-client-cert-sha256",
+            "in": "header",
+            "description": "Optional mTLS certificate thumbprint (RFC 8705)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-partner-id",
+            "in": "header",
+            "description": "Partner ID (partner1, partner2)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get status of own payment request (BOLA 404 protected between partners)",
+        "tags": [
+          "Partner mTLS API"
         ]
       }
     }
@@ -761,6 +1269,26 @@
       }
     },
     "schemas": {
+      "UpdateSystemConfigDto": {
+        "type": "object",
+        "properties": {
+          "stepUpThreshold": {
+            "type": "number",
+            "example": 1000,
+            "description": "Minimum transfer amount requiring Passkey step-up (PLN)"
+          },
+          "minDailyLimit": {
+            "type": "number",
+            "example": 100,
+            "description": "Minimum allowed daily limit (PLN)"
+          },
+          "maxDailyLimit": {
+            "type": "number",
+            "example": 50000,
+            "description": "Maximum allowed daily limit (PLN)"
+          }
+        }
+      },
       "UpdateLimitDto": {
         "type": "object",
         "properties": {
@@ -823,6 +1351,52 @@
         "required": [
           "receiverIban",
           "receiverName",
+          "amount",
+          "title"
+        ]
+      },
+      "CreateRecipientDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Anna Nowak (Czynsz)",
+            "description": "Saved recipient display name"
+          },
+          "iban": {
+            "type": "string",
+            "example": "PL99102010260000140202736451",
+            "description": "Recipient Polish IBAN"
+          }
+        },
+        "required": [
+          "name",
+          "iban"
+        ]
+      },
+      "CreatePaymentRequestDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "example": 149.99,
+            "description": "Requested payment amount"
+          },
+          "title": {
+            "type": "string",
+            "example": "Zamówienie #1024 w sklepie Partner",
+            "description": "Payment title"
+          },
+          "receiverIban": {
+            "type": "string",
+            "example": "PL99102010260000140202736451"
+          },
+          "receiverName": {
+            "type": "string",
+            "example": "Sklep Partner Sp. z o.o."
+          }
+        },
+        "required": [
           "amount",
           "title"
         ]
