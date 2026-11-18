@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import {
   Injectable,
   NotFoundException,
@@ -13,6 +14,12 @@ import { Role } from '../auth/interfaces/authenticated-user.interface.js';
 import { CreateTransactionDto } from './dto/create-transaction.dto.js';
 import { UpdateLimitDto } from './dto/update-limit.dto.js';
 import { UpdateStatusDto } from './dto/update-status.dto.js';
+import {
+  CreateRecipientDto,
+  CreatePaymentRequestDto,
+  UpdateSystemConfigDto,
+} from './dto/extra.dto.js';
+import { SignatureService } from '../auth/signature.service.js';
 
 @Injectable()
 export class AccountsService {
@@ -21,9 +28,92 @@ export class AccountsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly caslAbilityFactory: CaslAbilityFactory,
+    private readonly signatureService: SignatureService,
   ) {}
 
-  // Helper method to calculate daily spent amount for an account
+  // Automatyczne zakładanie profilu i rachunku demonstracyjnego po pierwszym logowaniu OIDC
+  async ensureCustomerExists(user: AuthenticatedUser) {
+    if (user.role !== Role.CLIENT) return;
+
+    const existing = await this.prisma.customer.findUnique({ where: { id: user.id } });
+    if (existing) return;
+
+    const randomDigits = `${randomInt(10000000, 99999999)}${randomInt(10000000, 99999999)}${randomInt(10000000, 99999999)}`;
+    const demoIban = `PL${randomInt(10, 99)}${randomDigits}`;
+
+    await this.prisma.customer.create({
+      data: {
+        id: user.id,
+        firstName: user.firstName ?? 'Nowy',
+        lastName: user.lastName ?? 'Klient',
+        email: user.email ?? `${user.id}@sbank.local`,
+        customerNumber: `CUST-${randomInt(10000, 99999)}`,
+        accounts: {
+          create: {
+            iban: demoIban,
+            currency: 'PLN',
+            balance: 1000.0,
+            dailyLimit: 5000.0,
+            status: 'ACTIVE',
+          },
+        },
+      },
+    });
+  }
+
+  async getSystemConfig() {
+    const cfg = await this.prisma.systemConfig.upsert({
+      where: { id: 'global' },
+      update: {},
+      create: {
+        id: 'global',
+        stepUpThreshold: 1000.0,
+        minDailyLimit: 100.0,
+        maxDailyLimit: 50000.0,
+      },
+    });
+
+    return {
+      id: cfg.id,
+      stepUpThreshold: Number(cfg.stepUpThreshold),
+      minDailyLimit: Number(cfg.minDailyLimit),
+      maxDailyLimit: Number(cfg.maxDailyLimit),
+      updatedAt: cfg.updatedAt,
+    };
+  }
+
+  async updateSystemConfig(dto: UpdateSystemConfigDto, user: AuthenticatedUser) {
+    if (user.role !== Role.ADMIN) {
+      await this.logSecurityIncident(user, 'UNAUTHORIZED_CONFIG_CHANGE', 'SystemConfig', 'Non-admin tried to change global config');
+      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Only admins can update global parameters' });
+    }
+
+    const current = await this.getSystemConfig();
+    const updated = await this.prisma.systemConfig.update({
+      where: { id: 'global' },
+      data: {
+        stepUpThreshold: dto.stepUpThreshold ?? current.stepUpThreshold,
+        minDailyLimit: dto.minDailyLimit ?? current.minDailyLimit,
+        maxDailyLimit: dto.maxDailyLimit ?? current.maxDailyLimit,
+      },
+    });
+
+    await this.logSecurityIncident(
+      user,
+      'ADMIN_CONFIG_UPDATED',
+      'SystemConfig',
+      `Updated stepUpThreshold=${Number(updated.stepUpThreshold)}, limits=${Number(updated.minDailyLimit)}-${Number(updated.maxDailyLimit)}`,
+    );
+
+    return {
+      id: updated.id,
+      stepUpThreshold: Number(updated.stepUpThreshold),
+      minDailyLimit: Number(updated.minDailyLimit),
+      maxDailyLimit: Number(updated.maxDailyLimit),
+      updatedAt: updated.updatedAt,
+    };
+  }
+
   private async calculateDailyUsed(accountId: string): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -53,6 +143,8 @@ export class AccountsService {
   }
 
   async findAllForUser(user: AuthenticatedUser) {
+    await this.ensureCustomerExists(user);
+
     if (user.role === Role.ADMIN || user.role === Role.EMPLOYEE) {
       const allAccounts = await this.prisma.account.findMany({
         include: { owner: true },
@@ -82,7 +174,11 @@ export class AccountsService {
 
     if (!ability.can(Action.Read, subject)) {
       await this.logSecurityIncident(user, 'BOLA_READ_ATTEMPT', accountId, 'Unauthorized attempt to read account');
-      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'You do not have permission to view this account' });
+      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' });
+    }
+
+    if (user.role === Role.EMPLOYEE) {
+      await this.logSecurityIncident(user, 'EMPLOYEE_ACCOUNT_VIEW', accountId, 'Employee viewed customer account');
     }
 
     return this.serializeAccount(account);
@@ -108,17 +204,24 @@ export class AccountsService {
   // ==================== TWO-STEP TRANSFER SYSTEM ====================
 
   async createTransferDraft(dto: CreateTransactionDto, user: AuthenticatedUser) {
-    let senderAccount = dto.senderAccountId
+    await this.ensureCustomerExists(user);
+
+    const senderAccount = dto.senderAccountId
       ? await this.prisma.account.findUnique({ where: { id: dto.senderAccountId } })
       : await this.prisma.account.findFirst({ where: { ownerId: user.id, currency: 'PLN' } });
 
     if (!senderAccount) {
-      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Sender account not found' });
+      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' });
     }
 
-    if (user.role === Role.CLIENT && senderAccount.ownerId !== user.id) {
-      await this.logSecurityIncident(user, 'UNAUTHORIZED_TRANSFER_ATTEMPT', senderAccount.id, 'Not account owner');
-      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'You are not the owner of this account' });
+    if (user.role !== Role.CLIENT) {
+      await this.logSecurityIncident(user, 'ROLE_TRANSFER_FORBIDDEN', senderAccount.id, 'Non-client tried to initiate transfer');
+      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Only clients can initiate transfers' });
+    }
+
+    if (senderAccount.ownerId !== user.id) {
+      await this.logSecurityIncident(user, 'BOLA_TRANSFER_ATTEMPT', senderAccount.id, 'Not account owner');
+      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' });
     }
 
     if (senderAccount.status !== 'ACTIVE') {
@@ -126,6 +229,27 @@ export class AccountsService {
         code: 'ACCOUNT_BLOCKED',
         message: 'Account is frozen or closed. Cannot initiate transfer.',
       });
+    }
+
+    const config = await this.getSystemConfig();
+    if (Number(dto.amount) >= config.stepUpThreshold && user.acr !== '2') {
+      await this.logSecurityIncident(
+        user,
+        'STEP_UP_REQUIRED',
+        senderAccount.id,
+        `Transfer of ${dto.amount} PLN requires Passkey step-up authentication (acr=2, threshold=${config.stepUpThreshold})`,
+      );
+      throw new ForbiddenException({
+        code: 'STEP_UP_REQUIRED',
+        message: `Transfers of ${config.stepUpThreshold} PLN or more require Passkey step-up confirmation (acr=2).`,
+      });
+    }
+
+    const ability = this.caslAbilityFactory.createForUser(user);
+    const subject = CaslAbilityFactory.toAccountSubject(senderAccount);
+    if (!ability.can(Action.Transfer, subject)) {
+      await this.logSecurityIncident(user, 'UNAUTHORIZED_TRANSFER_ATTEMPT', senderAccount.id, 'CASL transfer check failed');
+      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Cannot initiate transfer from this account' });
     }
 
     const receiverAccount = await this.prisma.account.findUnique({
@@ -200,12 +324,27 @@ export class AccountsService {
 
     const senderAccount = draft.senderAccount;
 
-    if (user.role === Role.CLIENT && senderAccount.ownerId !== user.id) {
-      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Unauthorized transfer confirmation attempt' });
+    if (user.role !== Role.CLIENT || senderAccount.ownerId !== user.id) {
+      await this.logSecurityIncident(user, 'BOLA_CONFIRM_ATTEMPT', transferId, 'Unauthorized transfer confirmation attempt');
+      throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer draft not found or already processed' });
     }
 
     if (senderAccount.status !== 'ACTIVE') {
       throw new ForbiddenException({ code: 'ACCOUNT_BLOCKED', message: 'Account is blocked' });
+    }
+
+    const config = await this.getSystemConfig();
+    if (Number(draft.amount) >= config.stepUpThreshold && user.acr !== '2') {
+      await this.logSecurityIncident(
+        user,
+        'STEP_UP_REQUIRED',
+        senderAccount.id,
+        `Transfer of ${draft.amount} PLN requires Passkey step-up authentication (acr=2)`,
+      );
+      throw new ForbiddenException({
+        code: 'STEP_UP_REQUIRED',
+        message: `Transfers of ${config.stepUpThreshold} PLN or more require Passkey step-up confirmation (acr=2).`,
+      });
     }
 
     const amount = Number(draft.amount);
@@ -219,8 +358,19 @@ export class AccountsService {
       throw new UnprocessableEntityException({ code: 'DAILY_LIMIT_EXCEEDED', message: 'Daily limit exceeded' });
     }
 
-    const operationNumber = `OP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const operationNumber = `OP-${Date.now()}-${randomInt(1000, 10000)}`;
     const executedAt = new Date();
+
+    const confirmationPayload = {
+      operationNumber,
+      senderIban: senderAccount.iban,
+      receiverIban: draft.receiverIban,
+      amount,
+      currency: draft.currency,
+      executedAt: executedAt.toISOString(),
+    };
+
+    const signature = this.signatureService.signTransferConfirmation(confirmationPayload);
 
     const completed = await this.prisma.$transaction(async (tx) => {
       await tx.account.update({
@@ -241,6 +391,7 @@ export class AccountsService {
           status: 'COMPLETED',
           operationNumber,
           executedAt,
+          signature,
         },
       });
     });
@@ -252,6 +403,8 @@ export class AccountsService {
       executedAt: completed.executedAt,
       amount: Number(completed.amount),
       currency: completed.currency,
+      signature: completed.signature ?? signature,
+      confirmationPayload,
     };
   }
 
@@ -265,8 +418,9 @@ export class AccountsService {
       throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer draft not found or already processed' });
     }
 
-    if (user.role === Role.CLIENT && draft.senderAccount.ownerId !== user.id) {
-      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Unauthorized cancellation attempt' });
+    if (user.role !== Role.CLIENT || draft.senderAccount.ownerId !== user.id) {
+      await this.logSecurityIncident(user, 'BOLA_CANCEL_ATTEMPT', transferId, 'Unauthorized cancellation attempt');
+      throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer draft not found or already processed' });
     }
 
     const cancelled = await this.prisma.transaction.update({
@@ -280,11 +434,135 @@ export class AccountsService {
     };
   }
 
+  // ==================== SAVED RECIPIENTS (BOLA 404 PROTECTED) ====================
+
+  async getRecipients(user: AuthenticatedUser) {
+    await this.ensureCustomerExists(user);
+    return this.prisma.recipient.findMany({
+      where: { ownerId: user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async createRecipient(dto: CreateRecipientDto, user: AuthenticatedUser) {
+    await this.ensureCustomerExists(user);
+    return this.prisma.recipient.create({
+      data: {
+        ownerId: user.id,
+        name: dto.name,
+        iban: dto.iban,
+      },
+    });
+  }
+
+  async deleteRecipient(recipientId: string, user: AuthenticatedUser) {
+    const recipient = await this.prisma.recipient.findUnique({ where: { id: recipientId } });
+    if (!recipient) {
+      throw new NotFoundException({ code: 'RECIPIENT_NOT_FOUND', message: 'Recipient not found' });
+    }
+
+    if (recipient.ownerId !== user.id) {
+      await this.logSecurityIncident(user, 'BOLA_RECIPIENT_DELETE', recipientId, 'Client tried to delete another user recipient');
+      throw new NotFoundException({ code: 'RECIPIENT_NOT_FOUND', message: 'Recipient not found' });
+    }
+
+    await this.prisma.recipient.delete({ where: { id: recipientId } });
+    return { deleted: true, id: recipientId };
+  }
+
+  // ==================== QR & DEEP LINK PAYMENT REQUESTS ====================
+
+  async getPaymentRequestForClient(requestId: string) {
+    const req = await this.prisma.paymentRequest.findUnique({ where: { id: requestId } });
+    if (!req) {
+      throw new NotFoundException({ code: 'PAYMENT_REQUEST_NOT_FOUND', message: 'Payment request not found' });
+    }
+    return {
+      ...req,
+      amount: Number(req.amount),
+    };
+  }
+
+  async payPaymentRequest(requestId: string, user: AuthenticatedUser) {
+    const payReq = await this.prisma.paymentRequest.findUnique({ where: { id: requestId } });
+    if (!payReq || payReq.status !== 'PENDING') {
+      throw new NotFoundException({
+        code: 'PAYMENT_REQUEST_NOT_FOUND',
+        message: 'Payment request not found or already paid',
+      });
+    }
+
+    const draft = await this.createTransferDraft(
+      {
+        receiverIban: payReq.receiverIban,
+        receiverName: payReq.receiverName,
+        amount: Number(payReq.amount),
+        title: payReq.title,
+      },
+      user,
+    );
+
+    const confirmed = await this.confirmTransfer(draft.id, user);
+
+    await this.prisma.paymentRequest.update({
+      where: { id: requestId },
+      data: {
+        status: 'PAID',
+        transactionId: confirmed.id,
+        paidAt: new Date(),
+      },
+    });
+
+    return confirmed;
+  }
+
+  // ==================== PARTNER API PAYMENT REQUESTS ====================
+
+  async createPartnerPaymentRequest(partnerId: string, dto: CreatePaymentRequestDto) {
+    const defaultReceiver = await this.prisma.account.findFirst({
+      where: { ownerId: 'client-2', currency: 'PLN' },
+    });
+
+    const created = await this.prisma.paymentRequest.create({
+      data: {
+        partnerId,
+        receiverIban: dto.receiverIban ?? defaultReceiver?.iban ?? 'PL99102010260000140202736451',
+        receiverName: dto.receiverName ?? `Sklep Partner (${partnerId})`,
+        amount: dto.amount,
+        currency: 'PLN',
+        title: dto.title,
+        status: 'PENDING',
+      },
+    });
+
+    return {
+      ...created,
+      amount: Number(created.amount),
+      deepLink: `sbank://pay/${created.id}`,
+    };
+  }
+
+  async getPartnerPaymentRequest(partnerId: string, requestId: string) {
+    const payReq = await this.prisma.paymentRequest.findUnique({ where: { id: requestId } });
+    if (!payReq || payReq.partnerId !== partnerId) {
+      throw new NotFoundException({ code: 'PAYMENT_REQUEST_NOT_FOUND', message: 'Payment request not found' });
+    }
+    return {
+      ...payReq,
+      amount: Number(payReq.amount),
+    };
+  }
+
   // ==================== LIMIT & STATUS MANAGEMENT ====================
 
   async updateLimitAuthorized(accountId: string, dto: UpdateLimitDto, user: AuthenticatedUser) {
     const account = await this.prisma.account.findUnique({ where: { id: accountId }, include: { owner: true } });
     if (!account) throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' });
+
+    if (user.role === Role.CLIENT && account.ownerId !== user.id) {
+      await this.logSecurityIncident(user, 'BOLA_LIMIT_CHANGE', accountId, 'Client tried to update another user limit');
+      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' });
+    }
 
     const ability = this.caslAbilityFactory.createForUser(user);
     const subject = CaslAbilityFactory.toAccountSubject(account);
@@ -292,6 +570,14 @@ export class AccountsService {
     if (!ability.can(Action.Update, subject)) {
       await this.logSecurityIncident(user, 'UNAUTHORIZED_LIMIT_CHANGE', accountId, 'Forbidden limit update attempt');
       throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Cannot update limit for this account' });
+    }
+
+    const config = await this.getSystemConfig();
+    if (dto.newLimit < config.minDailyLimit || dto.newLimit > config.maxDailyLimit) {
+      throw new BadRequestException({
+        code: 'LIMIT_OUT_OF_RANGE',
+        message: `Daily limit must be between ${config.minDailyLimit} and ${config.maxDailyLimit} PLN`,
+      });
     }
 
     const updated = await this.prisma.account.update({
@@ -358,8 +644,11 @@ export class AccountsService {
   }
 
   async getCustomerDetails(customerId: string, user: AuthenticatedUser) {
+    await this.ensureCustomerExists(user);
+
     if (user.role === Role.CLIENT && user.id !== customerId) {
-      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Cannot view other customer profile' });
+      await this.logSecurityIncident(user, 'BOLA_CUSTOMER_READ', customerId, 'Client tried to view another customer profile');
+      throw new NotFoundException({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer not found' });
     }
 
     const customer = await this.prisma.customer.findUnique({
@@ -369,6 +658,10 @@ export class AccountsService {
 
     if (!customer) {
       throw new NotFoundException({ code: 'CUSTOMER_NOT_FOUND', message: 'Customer not found' });
+    }
+
+    if (user.role === Role.EMPLOYEE) {
+      await this.logSecurityIncident(user, 'EMPLOYEE_CUSTOMER_VIEW', customerId, 'Employee viewed customer profile');
     }
 
     const serializedAccounts = await Promise.all(
@@ -403,6 +696,7 @@ export class AccountsService {
 
   async getAuditLogs(user: AuthenticatedUser) {
     if (user.role !== Role.ADMIN) {
+      await this.logSecurityIncident(user, 'UNAUTHORIZED_AUDIT_READ', 'AuditLog', 'Non-admin tried to read audit logs');
       throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Only admins can view audit logs' });
     }
     return this.prisma.auditLog.findMany({ orderBy: { createdAt: 'desc' } });
@@ -411,7 +705,14 @@ export class AccountsService {
   private async logSecurityIncident(user: AuthenticatedUser, action: string, resourceId: string, reason: string) {
     this.logger.warn(`SECURITY INCIDENT [${action}]: User ${user.id} (${user.role}) -> Resource ${resourceId}. Reason: ${reason}`);
     await this.prisma.auditLog.create({
-      data: { userId: user.id, userRole: user.role, action, resourceId, ipAddress: user.ipAddress, reason },
+      data: {
+        userId: user.id,
+        userRole: user.role,
+        action,
+        resourceId,
+        ipAddress: user.ipAddress ?? '127.0.0.1',
+        reason,
+      },
     });
   }
 }

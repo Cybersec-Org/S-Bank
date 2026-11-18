@@ -15,10 +15,11 @@ model Customer {
   keycloakSub    String?   @unique
   firstName      String
   lastName       String
-  email          String    @unique
-  customerNumber String    @unique
+  email          String      @unique
+  customerNumber String      @unique
   accounts       Account[]
-  createdAt      DateTime  @default(now())
+  recipients     Recipient[]
+  createdAt      DateTime    @default(now())
 }
 
 model Account {
@@ -28,7 +29,7 @@ model Account {
   owner                Customer      @relation(fields: [ownerId], references: [id])
   currency             String        @default("PLN")
   balance              Decimal       @default(0.00)
-  dailyLimit           Decimal       @default(1000.00)
+  dailyLimit           Decimal       @default(5000.00)
   status               String        @default("ACTIVE")
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
@@ -47,11 +48,43 @@ model Transaction {
   currency          String    @default("PLN")
   title             String
   status            String    @default("DRAFT")
+  signature         String?
   createdAt         DateTime  @default(now())
   executedAt        DateTime?
 
   senderAccount   Account  @relation("SenderAccount", fields: [senderAccountId], references: [id])
   receiverAccount Account? @relation("ReceiverAccount", fields: [receiverAccountId], references: [id])
+}
+
+model Recipient {
+  id        String   @id @default(uuid())
+  ownerId   String
+  owner     Customer @relation(fields: [ownerId], references: [id])
+  name      String
+  iban      String
+  createdAt DateTime @default(now())
+}
+
+model PaymentRequest {
+  id            String    @id @default(uuid())
+  partnerId     String
+  receiverIban  String
+  receiverName  String
+  amount        Decimal
+  currency      String    @default("PLN")
+  title         String
+  status        String    @default("PENDING")
+  transactionId String?
+  createdAt     DateTime  @default(now())
+  paidAt        DateTime?
+}
+
+model SystemConfig {
+  id              String   @id @default("global")
+  stepUpThreshold Decimal  @default(1000.00)
+  minDailyLimit   Decimal  @default(100.00)
+  maxDailyLimit   Decimal  @default(50000.00)
+  updatedAt       DateTime @updatedAt
 }
 
 model AuditLog {
