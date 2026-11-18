@@ -133,10 +133,16 @@ export class AccountsService {
   private async serializeAccount(acc: any) {
     const dailyUsed = await this.calculateDailyUsed(acc.id);
     return {
-      ...acc,
+      id: acc.id,
+      iban: acc.iban,
+      ownerId: acc.ownerId,
+      currency: acc.currency,
       balance: Number(acc.balance),
       dailyLimit: Number(acc.dailyLimit),
-      dailyUsed,
+      status: acc.status,
+      createdAt: acc.createdAt,
+      updatedAt: acc.updatedAt,
+      dailyUsed: acc.dailyUsed,
       ownerFirstName: acc.owner?.firstName,
       ownerLastName: acc.owner?.lastName,
     };

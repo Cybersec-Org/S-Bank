@@ -13,7 +13,6 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiHeader, ApiQuery } from '@nestjs/swagger';
 import { AccountsService } from './accounts.service.js';
-import { MockAuthGuard } from '../auth/mock-auth.guard.js';
 import { PoliciesGuard, CheckAbilities } from '../auth/policies.guard.js';
 import { Action } from '../auth/casl-ability.factory.js';
 import { CreateTransactionDto } from './dto/create-transaction.dto.js';

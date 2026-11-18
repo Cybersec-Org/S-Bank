@@ -4,6 +4,8 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
   console.log('Creating demo customers...');
 
   await prisma.customer.upsert({
@@ -45,7 +47,7 @@ async function main() {
     },
   });
 
-  await prisma.account.upsert({
+  const acc1Eur = await prisma.account.upsert({
     where: { iban: 'PL22102010260000140202736452' },
     update: {},
     create: {
@@ -78,9 +80,9 @@ async function main() {
     update: {},
     create: {
       operationNumber: 'OP-SEED-001',
-      senderAccountId: acc1Pln.id,
-      receiverAccountId: acc2Pln.id,
-      receiverIban: acc2Pln.iban,
+      senderAccountId: acc1.id,
+      receiverAccountId: acc2.id,
+      receiverIban: acc2.iban,
       receiverName: 'Anna Nowak',
       amount: 250.00,
       currency: 'PLN',
@@ -88,6 +90,35 @@ async function main() {
       status: 'COMPLETED',
       createdAt: yesterday,
       executedAt: yesterday,
+    },
+  });
+
+  console.log('Creating Keycloak integration...');
+  await prisma.customer.upsert({
+    where: { id: 'client-1' },
+    update: {
+      keycloakSub: 'c8df368e-a7d3-45d7-a5d6-f1e9ab242ab6',
+    },
+    create: {
+      id: 'client-1',
+      keycloakSub: 'c8df368e-a7d3-45d7-a5d6-f1e9ab242ab6',
+      firstName: 'Jan',
+      lastName: 'Kowalski',
+      email: 'jan.kowalski@example.com',
+      customerNumber: 'CUST-1001',
+    },
+  });
+
+  console.log('Creating system configuration...');
+
+  await prisma.systemConfig.upsert({
+    where: { id: 'global' },
+    update: {},
+    create: {
+      id: 'global',
+      stepUpThreshold: 1000,
+      minDailyLimit: 100,
+      maxDailyLimit: 50000,
     },
   });
 
