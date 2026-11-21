@@ -11,7 +11,10 @@ import { PartnersModule } from './partners/partners.module.js';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['../.env', '.env'],
+    }),
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

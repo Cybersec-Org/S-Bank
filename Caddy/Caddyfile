@@ -1,3 +1,4 @@
+
 {
     auto_https off
 }
@@ -12,33 +13,48 @@ partners.sbank.local:8443 {
         }
     }
 
-    request_header X-Client-CN {http.request.tls.client.subject}
-
     @partner1_payments {
-        path /api/payments/*
-        header X-Client-CN *CN=Partner1*
+        expression `{tls_client_fingerprint} == "0f2f7b3ad96ee1d1c0847a5a8fc1f2d773e32ca1b72946eb611bc1ddf4b51a55"`
+        path /api/payments/* /api/payment-requests /api/payment-requests/*
     }
 
-    @partner2_reports {
-        path /api/reports/*
-        header X-Client-CN *CN=Partner2*
+    @partner2_api {
+        expression `{tls_client_fingerprint} == "15b7d34b638b3fb61564a17f83e5aa353810741a9d8f17114562aa9b2ffd1dfe"`
+        path /api/payments/* /api/reports/* /api/payment-requests /api/payment-requests/*
     }
 
-    handle @partner1_payments {
-        request_header X-Partner-Id partner1
-        reverse_proxy host.docker.internal:3000
-    }
+    route {
+        # Remove all identity headers supplied by the client.
+        request_header -X-Partner-Id
+        request_header -X-Client-Cert-SHA256
+        request_header -X-Client-CN
+        request_header -X-SBank-Proxy-Token
 
-    handle @partner2_reports {
-        request_header X-Partner-Id partner2
-        reverse_proxy host.docker.internal:3000
-    }
+        handle @partner1_payments {
+            request_header X-Partner-Id partner1
+            request_header X-Client-Cert-SHA256 {tls_client_fingerprint}
+            request_header X-Client-CN {http.request.tls.client.subject}
+            request_header X-SBank-Proxy-Token {$PARTNER_PROXY_TOKEN}
 
-    handle /api/* {
-        respond "403 Forbidden" 403
-    }
+            reverse_proxy host.docker.internal:3000
+        }
 
-    handle {
-        respond "S-Bank Partner API" 200
+        handle @partner2_api {
+            request_header X-Partner-Id partner2
+            request_header X-Client-Cert-SHA256 {tls_client_fingerprint}
+            request_header X-Client-CN {http.request.tls.client.subject}
+            request_header X-SBank-Proxy-Token {$PARTNER_PROXY_TOKEN}
+
+            reverse_proxy host.docker.internal:3000
+        }
+
+        handle /api/* {
+            respond "403 Forbidden" 403
+        }
+
+        handle {
+            respond "S-Bank Partner API" 200
+        }
     }
 }
+
