@@ -6,7 +6,9 @@ import {
   SignatureService,
   type TransferConfirmationPayload,
 } from '../auth/signature.service.js';
+import { Public } from '../auth/policies.guard.js';
 
+@Public()
 @ApiTags('Public')
 @Throttle({ default: { limit: 30, ttl: 60000 } })
 @Controller('public')

@@ -10,8 +10,9 @@ import {
   Req,
   UseGuards,
   HttpCode,
+  ForbiddenException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiHeader, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiHeader, ApiQuery, ApiBearerAuth, } from '@nestjs/swagger';
 import { AccountsService } from './accounts.service.js';
 import { PoliciesGuard, CheckAbilities } from '../auth/policies.guard.js';
 import { Action } from '../auth/casl-ability.factory.js';
@@ -20,10 +21,10 @@ import { UpdateLimitDto } from './dto/update-limit.dto.js';
 import { UpdateStatusDto } from './dto/update-status.dto.js';
 import { CreateRecipientDto, UpdateSystemConfigDto } from './dto/extra.dto.js';
 import { UserAuthGuard } from '../auth/user-auth.guard.js';
+import { Role } from '../auth/interfaces/authenticated-user.interface.js';
 
 @ApiTags('Banking API')
-@ApiHeader({ name: 'x-user-id', description: 'User ID (e.g. client-1, emp-1, admin-1)', required: false })
-@ApiHeader({ name: 'x-user-role', description: 'User role (CLIENT, EMPLOYEE, ADMIN)', required: false })
+@ApiBearerAuth()
 @UseGuards(UserAuthGuard, PoliciesGuard)
 @Controller()
 export class AccountsController {
@@ -148,6 +149,12 @@ export class AccountsController {
   @CheckAbilities({ action: Action.Read, subject: 'Customer' })
   @ApiOperation({ summary: 'Get logged-in customer profile (for client dashboard)' })
   async getMyProfile(@Req() req: any) {
+    if (req.user.role !== Role.CLIENT) {
+      throw new ForbiddenException({
+        code: 'FORBIDDEN',
+        message: 'This endpoint is available to clients only',
+      });
+    }
     return this.accountsService.getCustomerDetails(req.user.id, req.user);
   }
 

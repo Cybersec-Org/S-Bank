@@ -1,4 +1,3 @@
-
 import {
   Injectable,
   InternalServerErrorException,
@@ -18,11 +17,11 @@ export class UserAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const mode = this.config.get<string>('AUTH_MODE') ??
-      (this.config.get<string>('NODE_ENV') === 'production' ? 'oidc' : 'mock');
+    const mode = this.config.get<string>('AUTH_MODE');
+    const environment = this.config.get<string>('NODE_ENV');
 
     if (mode === 'mock') {
-      if (this.config.get<string>('NODE_ENV') === 'production') {
+      if (environment === 'production') {
         throw new InternalServerErrorException(
           'Mock authentication is disabled in production',
         );
@@ -35,7 +34,8 @@ export class UserAuthGuard implements CanActivate {
       return this.jwtAuthGuard.canActivate(context);
     }
 
-    throw new InternalServerErrorException(`Unsupported AUTH_MODE: ${mode}`);
+    throw new InternalServerErrorException(
+      'AUTH_MODE must explicitly be set to "mock" or "oidc"',
+    );
   }
 }
-

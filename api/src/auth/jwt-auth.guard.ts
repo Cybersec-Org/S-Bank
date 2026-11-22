@@ -1,4 +1,3 @@
-
 import {
   Injectable,
   UnauthorizedException,
@@ -13,6 +12,7 @@ import { Role, type AuthenticatedUser } from './interfaces/authenticated-user.in
 interface KeycloakPayload extends JWTPayload {
   azp?: string;
   typ?: string;
+  acr?: string;
   realm_access?: {
     roles?: string[];
   };
@@ -114,10 +114,10 @@ export class JwtAuthGuard implements CanActivate {
       id: userId,
       role,
       ipAddress: request.ip || '127.0.0.1',
+      acr: payload.acr,
     };
-
+    
     request.user = user;
     return true;
   }
 }
-

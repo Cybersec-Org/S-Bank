@@ -549,10 +549,17 @@ export class AccountsService {
   }
 
   async getPartnerPaymentRequest(partnerId: string, requestId: string) {
-    const payReq = await this.prisma.paymentRequest.findUnique({ where: { id: requestId } });
+    const payReq = await this.prisma.paymentRequest.findUnique({
+      where: { id: requestId },
+    });
+ 
+    
     if (!payReq || payReq.partnerId !== partnerId) {
-      throw new NotFoundException({ code: 'PAYMENT_REQUEST_NOT_FOUND', message: 'Payment request not found' });
-    }
+      throw new NotFoundException({
+        code: 'PAYMENT_REQUEST_NOT_FOUND',
+        message: 'Payment request not found',
+      });
+    } 
     return {
       ...payReq,
       amount: Number(payReq.amount),
