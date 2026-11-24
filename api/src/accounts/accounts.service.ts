@@ -142,7 +142,7 @@ export class AccountsService {
       status: acc.status,
       createdAt: acc.createdAt,
       updatedAt: acc.updatedAt,
-      dailyUsed: acc.dailyUsed,
+      dailyUsed,
       ownerFirstName: acc.owner?.firstName,
       ownerLastName: acc.owner?.lastName,
     };
@@ -276,6 +276,13 @@ export class AccountsService {
       });
     }
 
+    if (senderAccount.currency !== receiverAccount.currency) {
+      throw new BadRequestException({
+        code: 'CURRENCY_MISMATCH',
+        message: `Currency mismatch: sender account uses ${senderAccount.currency}, receiver account uses ${receiverAccount.currency}.`,
+      });
+    }
+
     if (Number(senderAccount.balance) < dto.amount) {
       throw new UnprocessableEntityException({
         code: 'INSUFFICIENT_FUNDS',
@@ -318,50 +325,190 @@ export class AccountsService {
     };
   }
 
-  async confirmTransfer(transferId: string, user: AuthenticatedUser) {
-    const draft = await this.prisma.transaction.findUnique({
+  
+async confirmTransfer(transferId: string, user: AuthenticatedUser) {
+  // Initial lookup is used for authorization and security logging.
+  const initialDraft = await this.prisma.transaction.findUnique({
+    where: { id: transferId },
+    include: { senderAccount: true },
+  });
+
+  if (
+    !initialDraft ||
+    initialDraft.status !== 'DRAFT'
+  ) {
+    throw new NotFoundException({
+      code: 'TRANSFER_NOT_FOUND',
+      message: 'Transfer draft not found or already processed',
+    });
+  }
+
+  if (
+    user.role !== Role.CLIENT ||
+    initialDraft.senderAccount.ownerId !== user.id
+  ) {
+    await this.logSecurityIncident(
+      user,
+      'BOLA_CONFIRM_ATTEMPT',
+      transferId,
+      'Unauthorized transfer confirmation attempt',
+    );
+
+    throw new NotFoundException({
+      code: 'TRANSFER_NOT_FOUND',
+      message: 'Transfer draft not found or already processed',
+    });
+  }
+
+  const config = await this.getSystemConfig();
+
+  if (
+    Number(initialDraft.amount) >= config.stepUpThreshold &&
+    user.acr !== '2'
+  ) {
+    await this.logSecurityIncident(
+      user,
+      'STEP_UP_REQUIRED',
+      initialDraft.senderAccount.id,
+      `Transfer of ${initialDraft.amount} PLN requires Passkey step-up authentication (acr=2)`,
+    );
+
+    throw new ForbiddenException({
+      code: 'STEP_UP_REQUIRED',
+      message: `Transfers of ${config.stepUpThreshold} PLN or more require Passkey step-up confirmation (acr=2).`,
+    });
+  }
+
+  const result = await this.prisma.$transaction(async (tx) => {
+    // Serialize operations on this particular transfer.
+    await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "Transaction"
+      WHERE "id" = ${transferId}
+      FOR UPDATE
+    `;
+
+    // Always reload after acquiring the lock.
+    const draft = await tx.transaction.findUnique({
       where: { id: transferId },
-      include: { senderAccount: true, receiverAccount: true },
+      include: {
+        senderAccount: true,
+        receiverAccount: true,
+      },
     });
 
     if (!draft || draft.status !== 'DRAFT') {
-      throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer draft not found or already processed' });
+      throw new NotFoundException({
+        code: 'TRANSFER_NOT_FOUND',
+        message: 'Transfer draft not found or already processed',
+      });
     }
 
-    const senderAccount = draft.senderAccount;
+    const senderId = draft.senderAccountId;
+    const receiverId = draft.receiverAccountId;
 
-    if (user.role !== Role.CLIENT || senderAccount.ownerId !== user.id) {
-      await this.logSecurityIncident(user, 'BOLA_CONFIRM_ATTEMPT', transferId, 'Unauthorized transfer confirmation attempt');
-      throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer draft not found or already processed' });
+    // Lock accounts in deterministic order to reduce deadlock risk.
+    const accountIds = [
+      ...new Set([senderId, ...(receiverId ? [receiverId] : [])]),
+    ].sort();
+
+    for (const accountId of accountIds) {
+      await tx.$queryRaw<Array<{ id: string }>>
+      `
+        SELECT "id"
+        FROM "Account"
+        WHERE "id" = ${accountId}
+        FOR UPDATE
+      `;
+    }
+
+    // Reload account state after acquiring locks.
+    const senderAccount = await tx.account.findUnique({
+      where: { id: senderId },
+    });
+
+    const receiverAccount = receiverId
+      ? await tx.account.findUnique({
+          where: { id: receiverId },
+        })
+      : null;
+
+    if (!senderAccount || senderAccount.ownerId !== user.id) {
+      throw new NotFoundException({
+        code: 'TRANSFER_NOT_FOUND',
+        message: 'Transfer draft not found or already processed',
+      });
     }
 
     if (senderAccount.status !== 'ACTIVE') {
-      throw new ForbiddenException({ code: 'ACCOUNT_BLOCKED', message: 'Account is blocked' });
+      throw new ForbiddenException({
+        code: 'ACCOUNT_BLOCKED',
+        message: 'Account is blocked',
+      });
     }
 
-    const config = await this.getSystemConfig();
-    if (Number(draft.amount) >= config.stepUpThreshold && user.acr !== '2') {
-      await this.logSecurityIncident(
-        user,
-        'STEP_UP_REQUIRED',
-        senderAccount.id,
-        `Transfer of ${draft.amount} PLN requires Passkey step-up authentication (acr=2)`,
-      );
-      throw new ForbiddenException({
-        code: 'STEP_UP_REQUIRED',
-        message: `Transfers of ${config.stepUpThreshold} PLN or more require Passkey step-up confirmation (acr=2).`,
+    if (!receiverAccount || draft.currency !== receiverAccount.currency) {
+      throw new BadRequestException({
+        code: 'CURRENCY_MISMATCH',
+        message: 'Transfer cannot be completed because account currencies do not match.',
       });
     }
 
     const amount = Number(draft.amount);
 
-    if (Number(senderAccount.balance) < amount) {
-      throw new UnprocessableEntityException({ code: 'INSUFFICIENT_FUNDS', message: 'Insufficient funds' });
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BadRequestException({
+        code: 'INVALID_AMOUNT',
+        message: 'Transfer amount must be greater than zero.',
+      });
     }
 
-    const dailyUsed = await this.calculateDailyUsed(senderAccount.id);
+    if (Number(senderAccount.balance) < amount) {
+      throw new UnprocessableEntityException({
+        code: 'INSUFFICIENT_FUNDS',
+        message: 'Insufficient funds',
+      });
+    }
+
+    // Calculate daily usage inside this transaction.
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dailyAggregate = await tx.transaction.aggregate({
+      where: {
+        senderAccountId: senderId,
+        status: 'COMPLETED',
+        executedAt: { gte: today },
+      },
+      _sum: { amount: true },
+    });
+
+    const dailyUsed = Number(dailyAggregate._sum.amount ?? 0);
+
     if (dailyUsed + amount > Number(senderAccount.dailyLimit)) {
-      throw new UnprocessableEntityException({ code: 'DAILY_LIMIT_EXCEEDED', message: 'Daily limit exceeded' });
+      throw new UnprocessableEntityException({
+        code: 'DAILY_LIMIT_EXCEEDED',
+        message: 'Daily limit exceeded',
+      });
+    }
+
+    // Explicit conditional claim. The transaction rollback restores DRAFT
+    // if any subsequent operation fails.
+    const claimed = await tx.transaction.updateMany({
+      where: {
+        id: transferId,
+        status: 'DRAFT',
+      },
+      data: {
+        status: 'PROCESSING',
+      },
+    });
+
+    if (claimed.count !== 1) {
+      throw new NotFoundException({
+        code: 'TRANSFER_NOT_FOUND',
+        message: 'Transfer draft not found or already processed',
+      });
     }
 
     const operationNumber = `OP-${Date.now()}-${randomInt(1000, 10000)}`;
@@ -376,69 +523,132 @@ export class AccountsService {
       executedAt: executedAt.toISOString(),
     };
 
-    const signature = this.signatureService.signTransferConfirmation(confirmationPayload);
+    const signature =
+      this.signatureService.signTransferConfirmation(confirmationPayload);
 
-    const completed = await this.prisma.$transaction(async (tx) => {
-      await tx.account.update({
-        where: { id: senderAccount.id },
-        data: { balance: { decrement: amount } },
-      });
+    await tx.account.update({
+      where: { id: senderId },
+      data: { balance: { decrement: amount } },
+    });
 
-      if (draft.receiverAccountId) {
-        await tx.account.update({
-          where: { id: draft.receiverAccountId },
-          data: { balance: { increment: amount } },
-        });
-      }
+    await tx.account.update({
+      where: { id: receiverAccount.id },
+      data: { balance: { increment: amount } },
+    });
 
-      return tx.transaction.update({
-        where: { id: draft.id },
-        data: {
-          status: 'COMPLETED',
-          operationNumber,
-          executedAt,
-          signature,
-        },
-      });
+    const completed = await tx.transaction.update({
+      where: { id: transferId },
+      data: {
+        status: 'COMPLETED',
+        operationNumber,
+        executedAt,
+        signature,
+      },
     });
 
     return {
-      id: completed.id,
-      status: completed.status,
-      operationNumber: completed.operationNumber,
-      executedAt: completed.executedAt,
-      amount: Number(completed.amount),
-      currency: completed.currency,
-      signature: completed.signature ?? signature,
+      completed,
       confirmationPayload,
+      signature,
     };
+  });
+
+  return {
+    id: result.completed.id,
+    status: result.completed.status,
+    operationNumber: result.completed.operationNumber,
+    executedAt: result.completed.executedAt,
+    amount: Number(result.completed.amount),
+    currency: result.completed.currency,
+    signature: result.completed.signature ?? result.signature,
+    confirmationPayload: result.confirmationPayload,
+  };
+}
+
+
+
+async cancelTransfer(transferId: string, user: AuthenticatedUser) {
+  const initialDraft = await this.prisma.transaction.findUnique({
+    where: { id: transferId },
+    include: { senderAccount: true },
+  });
+
+  if (!initialDraft || initialDraft.status !== 'DRAFT') {
+    throw new NotFoundException({
+      code: 'TRANSFER_NOT_FOUND',
+      message: 'Transfer draft not found or already processed',
+    });
   }
 
-  async cancelTransfer(transferId: string, user: AuthenticatedUser) {
-    const draft = await this.prisma.transaction.findUnique({
+  if (
+    user.role !== Role.CLIENT ||
+    initialDraft.senderAccount.ownerId !== user.id
+  ) {
+    await this.logSecurityIncident(
+      user,
+      'BOLA_CANCEL_ATTEMPT',
+      transferId,
+      'Unauthorized cancellation attempt',
+    );
+
+    throw new NotFoundException({
+      code: 'TRANSFER_NOT_FOUND',
+      message: 'Transfer draft not found or already processed',
+    });
+  }
+
+  const cancelled = await this.prisma.$transaction(async (tx) => {
+    await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "Transaction"
+      WHERE "id" = ${transferId}
+      FOR UPDATE
+    `;
+
+    const draft = await tx.transaction.findUnique({
       where: { id: transferId },
       include: { senderAccount: true },
     });
 
-    if (!draft || draft.status !== 'DRAFT') {
-      throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer draft not found or already processed' });
+    if (
+      !draft ||
+      draft.status !== 'DRAFT' ||
+      draft.senderAccount.ownerId !== user.id
+    ) {
+      throw new NotFoundException({
+        code: 'TRANSFER_NOT_FOUND',
+        message: 'Transfer draft not found or already processed',
+      });
     }
 
-    if (user.role !== Role.CLIENT || draft.senderAccount.ownerId !== user.id) {
-      await this.logSecurityIncident(user, 'BOLA_CANCEL_ATTEMPT', transferId, 'Unauthorized cancellation attempt');
-      throw new NotFoundException({ code: 'TRANSFER_NOT_FOUND', message: 'Transfer draft not found or already processed' });
-    }
-
-    const cancelled = await this.prisma.transaction.update({
-      where: { id: transferId },
-      data: { status: 'CANCELLED' },
+    const result = await tx.transaction.updateMany({
+      where: {
+        id: transferId,
+        status: 'DRAFT',
+      },
+      data: {
+        status: 'CANCELLED',
+      },
     });
 
-    return {
-      id: cancelled.id,
-      status: cancelled.status,
-    };
-  }
+    if (result.count !== 1) {
+      throw new NotFoundException({
+        code: 'TRANSFER_NOT_FOUND',
+        message: 'Transfer draft not found or already processed',
+      });
+    }
+
+    return tx.transaction.findUniqueOrThrow({
+      where: { id: transferId },
+    });
+  });
+
+  return {
+    id: cancelled.id,
+    status: cancelled.status,
+  };
+}
+
 
   // ==================== SAVED RECIPIENTS (BOLA 404 PROTECTED) ====================
 

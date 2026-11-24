@@ -52,6 +52,7 @@ export class PoliciesGuard implements CanActivate {
 
     if (rules.length === 0) {
       return true;
+	    //throw new ForbiddenException('No authorization policy defined for this endpoint');
     }
 
     const ability = this.caslAbilityFactory.createForUser(user);
