@@ -1,0 +1,400 @@
+{
+  "realm": "sbank",
+  "enabled": true,
+  "displayName": "S-Bank",
+  "sslRequired": "external",
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxTemporaryLockouts": 0,
+  "bruteForceStrategy": "LINEAR",
+  "failureFactor": 10,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "maxDeltaTimeSeconds": 43200,
+  "quickLoginCheckMilliSeconds": 1000,
+  "minimumQuickLoginWaitSeconds": 60,
+  "passwordPolicy": "length(12) and notUsername",
+  "defaultSignatureAlgorithm": "RS256",
+  "accessTokenLifespan": 300,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["pl", "en"],
+  "defaultLocale": "pl",
+  "webAuthnPolicyRpEntityName": "S-Bank",
+  "webAuthnPolicySignatureAlgorithms": ["ES256", "RS256"],
+  "webAuthnPolicyRpId": "localhost",
+  "webAuthnPolicyAttestationConveyancePreference": "none",
+  "webAuthnPolicyAuthenticatorAttachment": "not specified",
+  "webAuthnPolicyRequireResidentKey": "Yes",
+  "webAuthnPolicyUserVerificationRequirement": "required",
+  "webAuthnPolicyCreateTimeout": 60,
+  "webAuthnPolicyAvoidSameAuthenticatorRegister": false,
+  "webAuthnPolicyPasswordlessRpEntityName": "S-Bank",
+  "webAuthnPolicyPasswordlessSignatureAlgorithms": ["ES256", "RS256"],
+  "webAuthnPolicyPasswordlessRpId": "localhost",
+  "webAuthnPolicyPasswordlessAttestationConveyancePreference": "none",
+  "webAuthnPolicyPasswordlessAuthenticatorAttachment": "not specified",
+  "webAuthnPolicyPasswordlessRequireResidentKey": "Yes",
+  "webAuthnPolicyPasswordlessUserVerificationRequirement": "required",
+  "webAuthnPolicyPasswordlessCreateTimeout": 60,
+  "webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister": false,
+  "webAuthnPolicyPasswordlessPasskeysEnabled": true,
+  "eventsEnabled": true,
+  "eventsExpiration": 2592000,
+  "eventsListeners": ["jboss-logging"],
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": false,
+  "attributes": {
+    "acr.loa.map": "{\"1\":\"1\",\"2\":\"2\"}"
+  },
+  "roles": {
+    "realm": [
+      {
+        "name": "customer",
+        "description": "Bank customer: own accounts, transfers and payees only"
+      },
+      {
+        "name": "employee",
+        "description": "Customer service employee: read-only customer view, account block and limit changes (Passkey required)"
+      },
+      {
+        "name": "admin",
+        "description": "Bank administrator: roles, API partners, audit log, global parameters (Passkey required)"
+      },
+      {
+        "name": "uma_authorization",
+        "description": "Keycloak built-in UMA role; declared here so it is not a default role"
+      },
+      {
+        "name": "default-roles-sbank",
+        "description": "Roles of every new user: customer",
+        "composite": true,
+        "composites": {
+          "realm": ["customer", "offline_access"],
+          "client": {
+            "account": ["view-profile", "manage-account"]
+          }
+        }
+      }
+    ]
+  },
+  "defaultRole": {
+    "name": "default-roles-sbank",
+    "description": "Roles of every new user: customer",
+    "composite": true
+  },
+  "scopeMappings": [
+    {
+      "client": "sbank-app",
+      "roles": ["customer", "employee", "admin"]
+    }
+  ],
+  "browserFlow": "sbank-browser",
+  "authenticationFlows": [
+    {
+      "alias": "sbank-browser",
+      "description": "S-Bank browser authentication with Password (LoA 1), Passkey Passwordless (LoA 2), Step-up, and mandatory Passkey for staff",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-cookie",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorFlow": true,
+          "requirement": "ALTERNATIVE",
+          "priority": 20,
+          "flowAlias": "sbank-auth-forms",
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "sbank-auth-forms",
+      "description": "Choice between Password (LoA 1) + staff passkey enforcement and Passkey Passwordless (LoA 2)",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticatorFlow": true,
+          "requirement": "CONDITIONAL",
+          "priority": 10,
+          "flowAlias": "sbank-loa-1-password",
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorFlow": true,
+          "requirement": "CONDITIONAL",
+          "priority": 20,
+          "flowAlias": "sbank-loa-2-passkey",
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "sbank-loa-1-password",
+      "description": "LoA 1: Username and password for customers; employee and admin require Passkey",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-level-of-authentication",
+          "authenticatorConfig": "sbank-loa-1-config",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "auth-username-password-form",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorFlow": true,
+          "requirement": "CONDITIONAL",
+          "priority": 30,
+          "flowAlias": "sbank-staff-employee-passkey",
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorFlow": true,
+          "requirement": "CONDITIONAL",
+          "priority": 40,
+          "flowAlias": "sbank-staff-admin-passkey",
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "sbank-staff-employee-passkey",
+      "description": "Require WebAuthn Passkey when an employee authenticates without Passkey",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-user-role",
+          "authenticatorConfig": "sbank-role-employee-config",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "conditional-credential",
+          "authenticatorConfig": "sbank-has-passkey-config",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "webauthn-authenticator-passwordless",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 30,
+          "userSetupAllowed": true
+        }
+      ]
+    },
+    {
+      "alias": "sbank-staff-admin-passkey",
+      "description": "Require WebAuthn Passkey when an admin authenticates without Passkey",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-user-role",
+          "authenticatorConfig": "sbank-role-admin-config",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "conditional-credential",
+          "authenticatorConfig": "sbank-has-passkey-config",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "webauthn-authenticator-passwordless",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 30,
+          "userSetupAllowed": true
+        }
+      ]
+    },
+    {
+      "alias": "sbank-loa-2-passkey",
+      "description": "LoA 2: Passwordless Passkey (WebAuthn) and Step-up",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-level-of-authentication",
+          "authenticatorConfig": "sbank-loa-2-config",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "webauthn-authenticator-passwordless",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": true
+        }
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    {
+      "alias": "sbank-loa-1-config",
+      "config": {
+        "loa-condition-level": "1",
+        "loa-max-age": "36000"
+      }
+    },
+    {
+      "alias": "sbank-loa-2-config",
+      "config": {
+        "loa-condition-level": "2",
+        "loa-max-age": "300"
+      }
+    },
+    {
+      "alias": "sbank-role-employee-config",
+      "config": {
+        "condUserRole": "employee",
+        "negate": "false"
+      }
+    },
+    {
+      "alias": "sbank-role-admin-config",
+      "config": {
+        "condUserRole": "admin",
+        "negate": "false"
+      }
+    },
+    {
+      "alias": "sbank-has-passkey-config",
+      "config": {
+        "credentials": "webauthn-passwordless",
+        "included": "false"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "sbank-app",
+      "name": "S-Bank",
+      "description": "Public OIDC client of the S-Bank app (iOS, Android, web): Authorization Code + PKCE S256",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "fullScopeAllowed": false,
+      "rootUrl": "http://localhost:8081",
+      "baseUrl": "/",
+      "redirectUris": [
+        "http://localhost:8081",
+        "http://localhost:8081/*",
+        "https://localhost/*",
+        "sbank://oauth/callback",
+        "sbank://*"
+      ],
+      "webOrigins": [
+        "http://localhost:8081",
+        "https://localhost"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8081/*##https://localhost/*##http://localhost:8081##sbank://*",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "standard.token.exchange.enabled": "false",
+        "use.refresh.tokens": "true",
+        "acr.loa.map": "{\"1\":\"1\",\"2\":\"2\"}",
+        "default.acr.values": "1"
+      },
+      "defaultClientScopes": ["basic", "acr", "roles", "web-origins", "profile", "email"],
+      "optionalClientScopes": [],
+      "protocolMappers": [
+        {
+          "name": "audience-sbank-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "sbank-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true",
+            "lightweight.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "sbank-api",
+      "name": "S-Bank API",
+      "description": "Resource server: exists only as the access token audience",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": false,
+      "clientAuthenticatorType": "client-jwt",
+      "consentRequired": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": false,
+      "fullScopeAllowed": false,
+      "redirectUris": [],
+      "webOrigins": [],
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "standard.token.exchange.enabled": "false",
+        "use.jwks.url": "false"
+      },
+      "defaultClientScopes": [],
+      "optionalClientScopes": []
+    }
+  ]
+}
