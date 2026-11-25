@@ -133,7 +133,7 @@ describe('AccountsService - partner payment requests', () => {
         manipulatedDto,
       );
 
-      const createCall = prisma.paymentRequest.create.mock.calls[0][0];
+      const createCall = prisma.paymentRequest.create.mock.calls[0]![0];
 
       expect(createCall.data.partnerId).toBe(PartnerId.PARTNER1);
       expect(createCall.data).not.toHaveProperty('partnerId', PartnerId.PARTNER2);

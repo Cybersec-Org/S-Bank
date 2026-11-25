@@ -61,23 +61,23 @@ describe('AccountsService transfers', () => {
     };
 
     tx = {
-      $queryRaw: jest.fn().mockResolvedValue([]),
+      $queryRaw: jest.fn<(...args: any[]) => any>().mockResolvedValue([]),
 
       transaction: {
-        findUnique: jest.fn().mockResolvedValue(draft),
-        aggregate: jest.fn().mockResolvedValue({
+        findUnique: jest.fn<(...args: any[]) => any>().mockResolvedValue(draft),
+        aggregate: jest.fn<(...args: any[]) => any>().mockResolvedValue({
           _sum: { amount: 0 },
         }),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-        update: jest.fn().mockResolvedValue(completedTransfer),
-	findUniqueOrThrow: jest.fn().mockResolvedValue({
+        updateMany: jest.fn<(...args: any[]) => any>().mockResolvedValue({ count: 1 }),
+        update: jest.fn<(...args: any[]) => any>().mockResolvedValue(completedTransfer),
+	findUniqueOrThrow: jest.fn<(...args: any[]) => any>().mockResolvedValue({
 	  ...draft,
 	  status: 'CANCELLED',
 	}),
       },
 
       systemConfig: {
-        upsert: jest.fn().mockResolvedValue({
+        upsert: jest.fn<(...args: any[]) => any>().mockResolvedValue({
           id: 'global',
           stepUpThreshold: 1000,
           minDailyLimit: 100,
@@ -87,7 +87,7 @@ describe('AccountsService transfers', () => {
       },
 
       account: {
-        findUnique: jest.fn(({ where }) => {
+        findUnique: jest.fn(({ where }: any) => {
           if (where.id === senderAccount.id) {
             return Promise.resolve(senderAccount);
           }
@@ -98,17 +98,17 @@ describe('AccountsService transfers', () => {
 
           return Promise.resolve(null);
         }),
-        update: jest.fn().mockResolvedValue({}),
+        update: jest.fn<(...args: any[]) => any>().mockResolvedValue({}),
       },
     };
 
     prisma = {
       transaction: {
-        findUnique: jest.fn().mockResolvedValue(draft),
+        findUnique: jest.fn<(...args: any[]) => any>().mockResolvedValue(draft),
       },
 
       systemConfig: {
-        upsert: jest.fn().mockResolvedValue({
+        upsert: jest.fn<(...args: any[]) => any>().mockResolvedValue({
           id: 'global',
           stepUpThreshold: 1000,
           minDailyLimit: 100,
@@ -117,14 +117,14 @@ describe('AccountsService transfers', () => {
         }),
       },
 
-      $transaction: jest.fn(async (callback) => callback(tx)),
+      $transaction: jest.fn(async (callback: any) => callback(tx)),
       auditLog: {
-        create: jest.fn().mockResolvedValue({}),
+        create: jest.fn<(...args: any[]) => any>().mockResolvedValue({}),
       },
     };
 
     signatureService = {
-      signTransferConfirmation: jest.fn().mockReturnValue('test-signature'),
+      signTransferConfirmation: jest.fn<(...args: any[]) => any>().mockReturnValue('test-signature'),
     };
 
     service = new AccountsService(
@@ -240,8 +240,43 @@ describe('AccountsService transfers', () => {
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     });
 
+    describe('step-up freshness (A2)', () => {
+      const nowSeconds = () => Math.floor(Date.now() / 1000);
+
+      beforeEach(() => {
+        tx.transaction.findUnique.mockResolvedValue({ ...draft, amount: 1500 });
+        tx.account.findUnique.mockImplementation(({ where }: any) =>
+          Promise.resolve(
+            where.id === senderAccount.id
+              ? { ...senderAccount, balance: 5000, dailyLimit: 10000 }
+              : receiverAccount,
+          ),
+        );
+      });
+
+      it('rejects acr=2 without auth_time (cannot prove a recent Passkey)', async () => {
+        await expect(
+          service.confirmTransfer('transfer-1', { ...user, acr: '2' }),
+        ).rejects.toMatchObject({ response: { code: 'STEP_UP_REQUIRED' } });
+
+        expect(tx.account.update).not.toHaveBeenCalled();
+      });
+
+      it('rejects acr=2 with auth_time older than 5 minutes', async () => {
+        await expect(
+          service.confirmTransfer('transfer-1', { ...user, acr: '2', authTime: nowSeconds() - 301 }),
+        ).rejects.toMatchObject({ response: { code: 'STEP_UP_REQUIRED' } });
+      });
+
+      it('accepts acr=2 with a fresh auth_time', async () => {
+        await expect(
+          service.confirmTransfer('transfer-1', { ...user, acr: '2', authTime: nowSeconds() - 60 }),
+        ).resolves.toMatchObject({ status: 'COMPLETED' });
+      });
+    });
+
     it('should reject a transfer when the sender has insufficient funds', async () => {
-      tx.account.findUnique.mockImplementation(({ where }) => {
+      tx.account.findUnique.mockImplementation(({ where }: any) => {
         if (where.id === senderAccount.id) {
           return Promise.resolve({
             ...senderAccount,

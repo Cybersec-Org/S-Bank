@@ -463,8 +463,9 @@ private async confirmTransferInTransaction(
   });
 
   const stepUpThreshold = Number(cfg.stepUpThreshold);
+  // Fail closed (A2): a token without `auth_time` cannot prove a recent Passkey step-up.
   const isStepUpFresh =
-    user.authTime === undefined ||
+    user.authTime !== undefined &&
     Math.floor(Date.now() / 1000) - user.authTime <= STEP_UP_MAX_AGE_SECONDS;
 
   if (

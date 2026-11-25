@@ -31,6 +31,7 @@ export type Subjects =
   | 'Customer'
   | 'Recipient'
   | 'PaymentRequest'
+  | 'Passkey'
   | 'SystemConfig'
   | 'all';
 
@@ -53,6 +54,8 @@ export class CaslAbilityFactory {
       can(Action.Update, 'Account');
       can(Action.Update, AccountSubject);
       can(Action.Read, 'Customer');
+      can(Action.Read, 'Passkey');
+      can(Action.Delete, 'Passkey');
       cannot(Action.Transfer, 'all');
       cannot(Action.Read, 'AuditLog');
       cannot(Action.Manage, 'SystemConfig');
@@ -64,6 +67,8 @@ export class CaslAbilityFactory {
       can(Action.Create, 'Recipient');
       can(Action.Delete, 'Recipient');
       can(Action.Read, 'PaymentRequest');
+      can(Action.Read, 'Passkey');
+      can(Action.Delete, 'Passkey');
       can(Action.Read, AccountSubject, { ownerId: user.id });
       can(Action.Transfer, AccountSubject, { ownerId: user.id, status: 'ACTIVE' });
       cannot(Action.Update, 'all');

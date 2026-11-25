@@ -36,7 +36,8 @@ export class MockAuthGuard implements CanActivate {
       }
 
       try {
-        const verifyOptions: JWTVerifyOptions = {};
+        // A8: same algorithm allow-list as the OIDC guard, so `alg` cannot be chosen by the token.
+        const verifyOptions: JWTVerifyOptions = { algorithms: ['RS256'] };
         const issuer = process.env['KEYCLOAK_ISSUER'];
         const audience = process.env['KEYCLOAK_AUDIENCE'];
 

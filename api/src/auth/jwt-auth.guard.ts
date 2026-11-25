@@ -2,6 +2,7 @@ import { randomInt } from 'node:crypto';
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
   type CanActivate,
   type ExecutionContext,
@@ -17,6 +18,7 @@ interface KeycloakPayload extends JWTPayload {
   acr?: string;
   auth_time?: number;
   email?: string;
+  email_verified?: boolean;
   given_name?: string;
   family_name?: string;
   preferred_username?: string;
@@ -36,6 +38,7 @@ const ROLE_ALIASES: Readonly<Record<string, Role>> = {
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
+  private readonly logger = new Logger(JwtAuthGuard.name);
   private jwks?: ReturnType<typeof createRemoteJWKSet>;
 
   constructor(
@@ -53,11 +56,17 @@ export class JwtAuthGuard implements CanActivate {
     };
   }
 
+  /**
+   * Keys come from `OIDC_JWKS_URL` when set (an API container reaches Keycloak by its service name while the
+   * tokens keep the public issuer), otherwise from the issuer's standard certs endpoint. `iss` is always
+   * checked against `OIDC_ISSUER_URL`.
+   */
   private getJwks(issuer: string) {
     if (!this.jwks) {
-      this.jwks = createRemoteJWKSet(
-        new URL(`${issuer}/protocol/openid-connect/certs`),
-      );
+      const jwksUrl =
+        this.config.get<string>('OIDC_JWKS_URL')?.trim() ||
+        `${issuer}/protocol/openid-connect/certs`;
+      this.jwks = createRemoteJWKSet(new URL(jwksUrl));
     }
 
     return this.jwks;
@@ -131,7 +140,7 @@ export class JwtAuthGuard implements CanActivate {
         select: { id: true },
       });
 
-      if (!customer && typeof payload.email === 'string' && payload.email.trim() !== '') {
+      if (!customer) {
         customer = await this.provisionOrLinkCustomer(payload);
       }
 
@@ -158,46 +167,67 @@ export class JwtAuthGuard implements CanActivate {
     return true;
   }
 
-  private async provisionOrLinkCustomer(payload: KeycloakPayload): Promise<{ id: string }> {
-    const email = payload.email!.trim().toLowerCase();
+  /**
+   * B-09: first sign-in of a customer that has no `keycloakSub` link yet. Only a **verified** e-mail counts as
+   * proof of identity (A1): an unverified or missing e-mail never links or creates anything, and a customer
+   * already linked to a different Keycloak user is never handed over. Returns `null` when the caller must be
+   * refused (401).
+   */
+  private async provisionOrLinkCustomer(payload: KeycloakPayload): Promise<{ id: string } | null> {
+    const sub = payload.sub;
+    const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
+    if (!sub || email === '' || payload.email_verified !== true) {
+      return null;
+    }
+
     const existingByEmail = await this.prisma.customer.findUnique({
       where: { email },
       select: { id: true, keycloakSub: true },
     });
 
     if (existingByEmail) {
-      if (!existingByEmail.keycloakSub) {
-        return this.prisma.customer.update({
-          where: { id: existingByEmail.id },
-          data: { keycloakSub: payload.sub! },
-          select: { id: true },
-        });
+      if (existingByEmail.keycloakSub !== null) {
+        this.logger.warn('Refused to link a Keycloak user to a customer already linked to another subject');
+        return null;
       }
-      return { id: existingByEmail.id };
+      // Conditional update: two first sign-ins racing for the same customer cannot both win.
+      const linked = await this.prisma.customer.updateMany({
+        where: { id: existingByEmail.id, keycloakSub: null },
+        data: { keycloakSub: sub },
+      });
+      return linked.count === 1 ? { id: existingByEmail.id } : null;
     }
 
     const randomDigits = `${randomInt(10000000, 99999999)}${randomInt(10000000, 99999999)}${randomInt(10000000, 99999999)}`;
     const demoIban = `PL${randomInt(10, 99)}${randomDigits}`;
 
-    return this.prisma.customer.create({
-      data: {
-        id: payload.sub!,
-        keycloakSub: payload.sub!,
-        firstName: payload.given_name?.trim() || 'Nowy',
-        lastName: payload.family_name?.trim() || 'Klient',
-        email,
-        customerNumber: `CUST-${randomInt(10000, 99999)}`,
-        accounts: {
-          create: {
-            iban: demoIban,
-            currency: 'PLN',
-            balance: 5000.0,
-            dailyLimit: 10000.0,
-            status: 'ACTIVE',
+    try {
+      return await this.prisma.customer.create({
+        data: {
+          id: sub,
+          keycloakSub: sub,
+          firstName: payload.given_name?.trim() || 'Nowy',
+          lastName: payload.family_name?.trim() || 'Klient',
+          email,
+          customerNumber: `CUST-${randomInt(10000, 99999)}`,
+          accounts: {
+            create: {
+              iban: demoIban,
+              currency: 'PLN',
+              balance: 5000.0,
+              dailyLimit: 10000.0,
+              status: 'ACTIVE',
+            },
           },
         },
-      },
-      select: { id: true },
-    });
+        select: { id: true },
+      });
+    } catch {
+      // A concurrent first request created the link (unique keycloakSub/email/id): use it if it is ours.
+      return this.prisma.customer.findUnique({
+        where: { keycloakSub: sub },
+        select: { id: true },
+      });
+    }
   }
 }

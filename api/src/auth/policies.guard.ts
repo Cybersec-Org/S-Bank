@@ -50,9 +50,12 @@ export class PoliciesGuard implements CanActivate {
       throw new ForbiddenException('User context is missing (deny by default)');
     }
 
+    // Deny by default (A4): every authenticated endpoint must declare its CASL rules or be @Public().
     if (rules.length === 0) {
-      return true;
-	    //throw new ForbiddenException('No authorization policy defined for this endpoint');
+      throw new ForbiddenException({
+        code: 'FORBIDDEN',
+        message: 'No authorization policy defined for this endpoint',
+      });
     }
 
     const ability = this.caslAbilityFactory.createForUser(user);

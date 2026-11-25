@@ -29,7 +29,9 @@ allowBuilds:
   esbuild: false
   '@prisma/client': true
   bcrypt: true
-  '@parcel/watcher': set this to true or false
+  # Transitive dependency of jest-haste-map (Jest 30, API tests). Its install script only builds a fallback
+  # binding when the prebuilt optional @parcel/watcher-<platform> package is missing, so it is denied.
+  '@parcel/watcher': false
 
 # Transitive fixes for advisories that the Prisma CLI (build/migrate tooling, not API runtime code)
 # pulls in. Remove an entry as soon as Prisma ships a release that depends on a fixed version.

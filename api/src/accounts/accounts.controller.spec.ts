@@ -72,12 +72,12 @@ describe('AccountsController authorization', () => {
     controller = new AccountsController(service as AccountsService);
 
     const reflector = {
-      getAllAndOverride: jest.fn<PoliciesGuardReflector['getAllAndOverride']>(),
+      getAllAndOverride: jest.fn<(key: unknown, targets: unknown[]) => unknown>(),
     };
 
-    reflector.getAllAndOverride.mockImplementation((_key, targets) => {
-      const metadata = Reflect.getMetadata(_key as string, targets[0]!);
-      return metadata ?? Reflect.getMetadata(_key as string, targets[1]!);
+    reflector.getAllAndOverride.mockImplementation((_key: unknown, targets: unknown[]) => {
+      const metadata = Reflect.getMetadata(_key as string, targets[0] as object);
+      return metadata ?? Reflect.getMetadata(_key as string, targets[1] as object);
     });
 
     policiesGuard = new PoliciesGuard(
