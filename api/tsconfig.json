@@ -7,7 +7,7 @@
     "moduleResolution": "nodenext",
     "target": "ES2023",
     "lib": ["ES2023"],
-    "types": ["node"],
+    "types": ["node", "jest"],
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,

@@ -1,6 +1,6 @@
-import { AccountsService } from './accounts.service';
-import { Role } from '../auth/interfaces/authenticated-user.interface';
-import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { AccountsService } from './accounts.service.js';
+import { Role } from '../auth/interfaces/authenticated-user.interface.js';
+import type { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface.js';
 import { jest } from '@jest/globals';
 
 describe('AccountsService transfers', () => {
@@ -74,6 +74,16 @@ describe('AccountsService transfers', () => {
 	  ...draft,
 	  status: 'CANCELLED',
 	}),
+      },
+
+      systemConfig: {
+        upsert: jest.fn().mockResolvedValue({
+          id: 'global',
+          stepUpThreshold: 1000,
+          minDailyLimit: 100,
+	  maxDailyLimit: 50000,
+          updatedAt: new Date(),
+        }),
       },
 
       account: {
@@ -172,17 +182,17 @@ describe('AccountsService transfers', () => {
       );
     });
     it('should reject a transfer that does not exist', async () => {
-      prisma.transaction.findUnique.mockResolvedValue(null);
+      tx.transaction.findUnique.mockResolvedValue(null);
 
       await expect(
         service.confirmTransfer('missing-transfer', user),
       ).rejects.toThrow();
 
-      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     });
 
     it('should reject a transfer that is no longer a draft', async () => {
-      prisma.transaction.findUnique.mockResolvedValue({
+      tx.transaction.findUnique.mockResolvedValue({
         ...draft,
         status: 'COMPLETED',
       });
@@ -191,11 +201,11 @@ describe('AccountsService transfers', () => {
       service.confirmTransfer('transfer-1', user),
     ).rejects.toThrow();
 
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     });
 
     it('should reject an attempt to confirm another customer transfer', async () => {
-      prisma.transaction.findUnique.mockResolvedValue({
+      tx.transaction.findUnique.mockResolvedValue({
         ...draft,
         senderAccount: {
         ...senderAccount,
@@ -208,11 +218,11 @@ describe('AccountsService transfers', () => {
       ).rejects.toThrow();
 
       expect(prisma.auditLog.create).toHaveBeenCalled();
-      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     });
 
     it('should require step-up authentication for transfers at or above the threshold', async () => {
-      prisma.transaction.findUnique.mockResolvedValue({
+      tx.transaction.findUnique.mockResolvedValue({
         ...draft,
         amount: 1500,
       });
@@ -227,7 +237,7 @@ describe('AccountsService transfers', () => {
         ).rejects.toThrow();
 
       expect(prisma.auditLog.create).toHaveBeenCalled();
-      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.$transaction).toHaveBeenCalledTimes(1);
     });
 
     it('should reject a transfer when the sender has insufficient funds', async () => {

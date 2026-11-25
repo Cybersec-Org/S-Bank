@@ -20,6 +20,7 @@ import {
   UpdateSystemConfigDto,
 } from './dto/extra.dto.js';
 import { SignatureService } from '../auth/signature.service.js';
+import type { Prisma } from '@prisma/client';
 
 const STEP_UP_MAX_AGE_SECONDS = 300;
 
@@ -116,11 +117,14 @@ export class AccountsService {
     };
   }
 
-  private async calculateDailyUsed(accountId: string): Promise<number> {
+  private async calculateDailyUsed(
+    prisma: Prisma.TransactionClient | PrismaService,
+    accountId: string,
+  ): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const agg = await this.prisma.transaction.aggregate({
+    const agg = await prisma.transaction.aggregate({
       where: {
         senderAccountId: accountId,
         status: 'COMPLETED',
@@ -131,9 +135,9 @@ export class AccountsService {
 
     return Number(agg._sum.amount ?? 0);
   }
-
+  
   private async serializeAccount(acc: any) {
-    const dailyUsed = await this.calculateDailyUsed(acc.id);
+    const dailyUsed = await this.calculateDailyUsed(this.prisma, acc.id);
     return {
       id: acc.id,
       iban: acc.iban,
@@ -211,152 +215,219 @@ export class AccountsService {
 
   // ==================== TWO-STEP TRANSFER SYSTEM ====================
 
-  async createTransferDraft(dto: CreateTransactionDto, user: AuthenticatedUser) {
-    await this.ensureCustomerExists(user);
+ async createTransferDraft(dto: CreateTransactionDto, user: AuthenticatedUser) {
+  await this.ensureCustomerExists(user);
 
-    const senderAccount = dto.senderAccountId
-      ? await this.prisma.account.findUnique({ where: { id: dto.senderAccountId } })
-      : await this.prisma.account.findFirst({ where: { ownerId: user.id, currency: 'PLN' } });
+  return this.prisma.$transaction(async (tx) => {
+    return this.createTransferDraftInTransaction(tx, dto, user);
+  });
+}
 
-    if (!senderAccount) {
-      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' });
-    }
-
-    if (user.role !== Role.CLIENT) {
-      await this.logSecurityIncident(user, 'ROLE_TRANSFER_FORBIDDEN', senderAccount.id, 'Non-client tried to initiate transfer');
-      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Only clients can initiate transfers' });
-    }
-
-    if (senderAccount.ownerId !== user.id) {
-      await this.logSecurityIncident(user, 'BOLA_TRANSFER_ATTEMPT', senderAccount.id, 'Not account owner');
-      throw new NotFoundException({ code: 'ACCOUNT_NOT_FOUND', message: 'Account not found' });
-    }
-
-    if (senderAccount.status !== 'ACTIVE') {
-      throw new ForbiddenException({
-        code: 'ACCOUNT_BLOCKED',
-        message: 'Account is frozen or closed. Cannot initiate transfer.',
+private async createTransferDraftInTransaction(
+  tx: Prisma.TransactionClient,
+  dto: CreateTransactionDto,
+  user: AuthenticatedUser,
+) {
+  const senderAccount = dto.senderAccountId
+    ? await tx.account.findUnique({ where: { id: dto.senderAccountId } })
+    : await tx.account.findFirst({
+        where: { ownerId: user.id, currency: 'PLN' },
       });
-    }
 
-    const config = await this.getSystemConfig();
-
-    const ability = this.caslAbilityFactory.createForUser(user);
-    const subject = CaslAbilityFactory.toAccountSubject(senderAccount);
-    if (!ability.can(Action.Transfer, subject)) {
-      await this.logSecurityIncident(user, 'UNAUTHORIZED_TRANSFER_ATTEMPT', senderAccount.id, 'CASL transfer check failed');
-      throw new ForbiddenException({ code: 'FORBIDDEN', message: 'Cannot initiate transfer from this account' });
-    }
-
-    const receiverAccount = await this.prisma.account.findUnique({
-      where: { iban: dto.receiverIban },
+  if (!senderAccount) {
+    throw new NotFoundException({
+      code: 'ACCOUNT_NOT_FOUND',
+      message: 'Account not found',
     });
-
-    if (!receiverAccount) {
-      throw new NotFoundException({
-        code: 'RECIPIENT_NOT_FOUND',
-        message: 'Receiver account with given IBAN does not exist in this bank.',
-      });
-    }
-
-    if (senderAccount.id === receiverAccount.id) {
-      throw new BadRequestException({
-        code: 'SAME_ACCOUNT_TRANSFER',
-        message: 'Cannot transfer funds to the same account.',
-      });
-    }
-
-    if (senderAccount.currency !== receiverAccount.currency) {
-      throw new BadRequestException({
-        code: 'CURRENCY_MISMATCH',
-        message: `Currency mismatch: sender account uses ${senderAccount.currency}, receiver account uses ${receiverAccount.currency}.`,
-      });
-    }
-
-    if (Number(senderAccount.balance) < dto.amount) {
-      throw new UnprocessableEntityException({
-        code: 'INSUFFICIENT_FUNDS',
-        message: 'Insufficient funds on the account.',
-      });
-    }
-
-    const dailyUsed = await this.calculateDailyUsed(senderAccount.id);
-    if (dailyUsed + dto.amount > Number(senderAccount.dailyLimit)) {
-      throw new UnprocessableEntityException({
-        code: 'DAILY_LIMIT_EXCEEDED',
-        message: `Daily limit exceeded. Used today: ${dailyUsed}, Limit: ${Number(senderAccount.dailyLimit)}`,
-      });
-    }
-
-    const draft = await this.prisma.transaction.create({
-      data: {
-        senderAccountId: senderAccount.id,
-        receiverAccountId: receiverAccount.id,
-        receiverIban: dto.receiverIban,
-        receiverName: dto.receiverName,
-        amount: dto.amount,
-        currency: senderAccount.currency,
-        title: dto.title,
-        status: 'DRAFT',
-      },
-    });
-
-    return {
-      id: draft.id,
-      status: draft.status,
-      senderAccountId: draft.senderAccountId,
-      senderIban: senderAccount.iban,
-      receiverIban: draft.receiverIban,
-      receiverName: draft.receiverName,
-      amount: Number(draft.amount),
-      currency: draft.currency,
-      title: draft.title,
-      requiresStepUp: Number(draft.amount) >= config.stepUpThreshold,
-      createdAt: draft.createdAt,
-    };
   }
 
-  async getTransferDraft(transferId: string, user: AuthenticatedUser) {
-    const draft = await this.prisma.transaction.findUnique({
-      where: { id: transferId },
-      include: { senderAccount: true },
+  if (user.role !== Role.CLIENT) {
+    await this.logSecurityIncident(
+      user,
+      'ROLE_TRANSFER_FORBIDDEN',
+      senderAccount.id,
+      'Non-client tried to initiate transfer',
+    );
+    throw new ForbiddenException({
+      code: 'FORBIDDEN',
+      message: 'Only clients can initiate transfers',
     });
-
-    if (!draft || draft.status !== 'DRAFT' || draft.senderAccount.ownerId !== user.id) {
-      throw new NotFoundException({
-        code: 'TRANSFER_NOT_FOUND',
-        message: 'Transfer draft not found or already processed',
-      });
-    }
-
-    const config = await this.getSystemConfig();
-    return {
-      id: draft.id,
-      status: draft.status,
-      senderAccountId: draft.senderAccountId,
-      senderIban: draft.senderAccount.iban,
-      receiverIban: draft.receiverIban,
-      receiverName: draft.receiverName,
-      amount: Number(draft.amount),
-      currency: draft.currency,
-      title: draft.title,
-      requiresStepUp: Number(draft.amount) >= config.stepUpThreshold,
-      createdAt: draft.createdAt,
-    };
   }
 
-  
-async confirmTransfer(transferId: string, user: AuthenticatedUser) {
-  // Initial lookup is used for authorization and security logging.
-  const initialDraft = await this.prisma.transaction.findUnique({
+  if (senderAccount.ownerId !== user.id) {
+    await this.logSecurityIncident(
+      user,
+      'BOLA_TRANSFER_ATTEMPT',
+      senderAccount.id,
+      'Not account owner',
+    );
+    throw new NotFoundException({
+      code: 'ACCOUNT_NOT_FOUND',
+      message: 'Account not found',
+    });
+  }
+
+  if (senderAccount.status !== 'ACTIVE') {
+    throw new ForbiddenException({
+      code: 'ACCOUNT_BLOCKED',
+      message: 'Account is frozen or closed. Cannot initiate transfer.',
+    });
+  }
+
+  const cfg = await tx.systemConfig.upsert({
+    where: { id: 'global' },
+    update: {},
+    create: {
+      id: 'global',
+      stepUpThreshold: 1000.0,
+      minDailyLimit: 100.0,
+      maxDailyLimit: 50000.0,
+    },
+  });
+
+  const stepUpThreshold = Number(cfg.stepUpThreshold);
+
+  const ability = this.caslAbilityFactory.createForUser(user);
+  const subject = CaslAbilityFactory.toAccountSubject(senderAccount);
+
+  if (!ability.can(Action.Transfer, subject)) {
+    await this.logSecurityIncident(
+      user,
+      'UNAUTHORIZED_TRANSFER_ATTEMPT',
+      senderAccount.id,
+      'CASL transfer check failed',
+    );
+    throw new ForbiddenException({
+      code: 'FORBIDDEN',
+      message: 'Cannot initiate transfer from this account',
+    });
+  }
+
+  const receiverAccount = await tx.account.findUnique({
+    where: { iban: dto.receiverIban },
+  });
+
+  if (!receiverAccount) {
+    throw new NotFoundException({
+      code: 'RECIPIENT_NOT_FOUND',
+      message: 'Receiver account with given IBAN does not exist in this bank.',
+    });
+  }
+
+  if (senderAccount.id === receiverAccount.id) {
+    throw new BadRequestException({
+      code: 'SAME_ACCOUNT_TRANSFER',
+      message: 'Cannot transfer funds to the same account.',
+    });
+  }
+
+  if (senderAccount.currency !== receiverAccount.currency) {
+    throw new BadRequestException({
+      code: 'CURRENCY_MISMATCH',
+      message: `Currency mismatch: sender account uses ${senderAccount.currency}, receiver account uses ${receiverAccount.currency}.`,
+    });
+  }
+
+  if (Number(senderAccount.balance) < dto.amount) {
+    throw new UnprocessableEntityException({
+      code: 'INSUFFICIENT_FUNDS',
+      message: 'Insufficient funds on the account.',
+    });
+  }
+
+  const dailyUsed = await this.calculateDailyUsed(tx, senderAccount.id);
+
+  if (dailyUsed + dto.amount > Number(senderAccount.dailyLimit)) {
+    throw new UnprocessableEntityException({
+      code: 'DAILY_LIMIT_EXCEEDED',
+      message: `Daily limit exceeded. Used today: ${dailyUsed}, Limit: ${Number(senderAccount.dailyLimit)}`,
+    });
+  }
+
+  const draft = await tx.transaction.create({
+    data: {
+      senderAccountId: senderAccount.id,
+      receiverAccountId: receiverAccount.id,
+      receiverIban: dto.receiverIban,
+      receiverName: dto.receiverName,
+      amount: dto.amount,
+      currency: senderAccount.currency,
+      title: dto.title,
+      status: 'DRAFT',
+    },
+  });
+
+  return {
+    id: draft.id,
+    status: draft.status,
+    senderAccountId: draft.senderAccountId,
+    senderIban: senderAccount.iban,
+    receiverIban: draft.receiverIban,
+    receiverName: draft.receiverName,
+    amount: Number(draft.amount),
+    currency: draft.currency,
+    title: draft.title,
+    requiresStepUp: Number(draft.amount) >= stepUpThreshold,
+    createdAt: draft.createdAt,
+  };
+}
+
+async getTransferDraft(transferId: string, user: AuthenticatedUser) {
+  const draft = await this.prisma.transaction.findUnique({
     where: { id: transferId },
     include: { senderAccount: true },
   });
 
-  if (
-    !initialDraft ||
-    initialDraft.status !== 'DRAFT'
-  ) {
+  if (!draft || draft.status !== 'DRAFT' || draft.senderAccount.ownerId !== user.id) {
+    throw new NotFoundException({
+      code: 'TRANSFER_NOT_FOUND',
+      message: 'Transfer draft not found or already processed',
+    });
+  }
+
+  const config = await this.getSystemConfig();
+  return {
+    id: draft.id,
+    status: draft.status,
+    senderAccountId: draft.senderAccountId,
+    senderIban: draft.senderAccount.iban,
+    receiverIban: draft.receiverIban,
+    receiverName: draft.receiverName,
+    amount: Number(draft.amount),
+    currency: draft.currency,
+    title: draft.title,
+    requiresStepUp: Number(draft.amount) >= config.stepUpThreshold,
+    createdAt: draft.createdAt,
+  };
+}
+
+async confirmTransfer(transferId: string, user: AuthenticatedUser) {
+  return this.prisma.$transaction(async (tx) => {
+    return this.confirmTransferInTransaction(tx, transferId, user);
+  });
+}
+
+private async confirmTransferInTransaction(
+  tx: Prisma.TransactionClient,
+  transferId: string,
+  user: AuthenticatedUser,
+) {
+  await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id"
+    FROM "Transaction"
+    WHERE "id" = ${transferId}
+    FOR UPDATE
+  `;
+
+  const draft = await tx.transaction.findUnique({
+    where: { id: transferId },
+    include: {
+      senderAccount: true,
+      receiverAccount: true,
+    },
+  });
+
+  if (!draft || draft.status !== 'DRAFT') {
     throw new NotFoundException({
       code: 'TRANSFER_NOT_FOUND',
       message: 'Transfer draft not found or already processed',
@@ -365,7 +436,7 @@ async confirmTransfer(transferId: string, user: AuthenticatedUser) {
 
   if (
     user.role !== Role.CLIENT ||
-    initialDraft.senderAccount.ownerId !== user.id
+    draft.senderAccount.ownerId !== user.id
   ) {
     await this.logSecurityIncident(
       user,
@@ -380,211 +451,168 @@ async confirmTransfer(transferId: string, user: AuthenticatedUser) {
     });
   }
 
-  const config = await this.getSystemConfig();
+  const cfg = await tx.systemConfig.upsert({
+    where: { id: 'global' },
+    update: {},
+    create: {
+      id: 'global',
+      stepUpThreshold: 1000.0,
+      minDailyLimit: 100.0,
+      maxDailyLimit: 50000.0,
+    },
+  });
+
+  const stepUpThreshold = Number(cfg.stepUpThreshold);
   const isStepUpFresh =
     user.authTime === undefined ||
     Math.floor(Date.now() / 1000) - user.authTime <= STEP_UP_MAX_AGE_SECONDS;
 
   if (
-    Number(initialDraft.amount) >= config.stepUpThreshold &&
+    Number(draft.amount) >= stepUpThreshold &&
     (user.acr !== '2' || !isStepUpFresh)
   ) {
     await this.logSecurityIncident(
       user,
       'STEP_UP_REQUIRED',
-      initialDraft.senderAccount.id,
-      `Transfer of ${initialDraft.amount} PLN requires fresh Passkey step-up authentication (acr=2)`,
+      draft.senderAccount.id,
+      `Transfer of ${draft.amount} PLN requires fresh Passkey step-up authentication (acr=2)`,
     );
 
     throw new ForbiddenException({
       code: 'STEP_UP_REQUIRED',
-      message: `Transfers of ${config.stepUpThreshold} PLN or more require Passkey step-up confirmation (acr=2).`,
+      message: `Transfers of ${stepUpThreshold} PLN or more require Passkey step-up confirmation (acr=2).`,
     });
   }
 
-  const result = await this.prisma.$transaction(async (tx) => {
-    // Serialize operations on this particular transfer.
+  const senderId = draft.senderAccountId;
+  const receiverId = draft.receiverAccountId;
+
+  const accountIds = [
+    ...new Set([senderId, ...(receiverId ? [receiverId] : [])]),
+  ].sort();
+
+  for (const accountId of accountIds) {
     await tx.$queryRaw<Array<{ id: string }>>`
       SELECT "id"
-      FROM "Transaction"
-      WHERE "id" = ${transferId}
+      FROM "Account"
+      WHERE "id" = ${accountId}
       FOR UPDATE
     `;
+  }
 
-    // Always reload after acquiring the lock.
-    const draft = await tx.transaction.findUnique({
-      where: { id: transferId },
-      include: {
-        senderAccount: true,
-        receiverAccount: true,
-      },
+  const senderAccount = await tx.account.findUnique({
+    where: { id: senderId },
+  });
+
+  const receiverAccount = receiverId
+    ? await tx.account.findUnique({ where: { id: receiverId } })
+    : null;
+
+  if (!senderAccount || senderAccount.ownerId !== user.id) {
+    throw new NotFoundException({
+      code: 'TRANSFER_NOT_FOUND',
+      message: 'Transfer draft not found or already processed',
     });
+  }
 
-    if (!draft || draft.status !== 'DRAFT') {
-      throw new NotFoundException({
-        code: 'TRANSFER_NOT_FOUND',
-        message: 'Transfer draft not found or already processed',
-      });
-    }
-
-    const senderId = draft.senderAccountId;
-    const receiverId = draft.receiverAccountId;
-
-    // Lock accounts in deterministic order to reduce deadlock risk.
-    const accountIds = [
-      ...new Set([senderId, ...(receiverId ? [receiverId] : [])]),
-    ].sort();
-
-    for (const accountId of accountIds) {
-      await tx.$queryRaw<Array<{ id: string }>>
-      `
-        SELECT "id"
-        FROM "Account"
-        WHERE "id" = ${accountId}
-        FOR UPDATE
-      `;
-    }
-
-    // Reload account state after acquiring locks.
-    const senderAccount = await tx.account.findUnique({
-      where: { id: senderId },
+  if (senderAccount.status !== 'ACTIVE') {
+    throw new ForbiddenException({
+      code: 'ACCOUNT_BLOCKED',
+      message: 'Account is blocked',
     });
+  }
 
-    const receiverAccount = receiverId
-      ? await tx.account.findUnique({
-          where: { id: receiverId },
-        })
-      : null;
-
-    if (!senderAccount || senderAccount.ownerId !== user.id) {
-      throw new NotFoundException({
-        code: 'TRANSFER_NOT_FOUND',
-        message: 'Transfer draft not found or already processed',
-      });
-    }
-
-    if (senderAccount.status !== 'ACTIVE') {
-      throw new ForbiddenException({
-        code: 'ACCOUNT_BLOCKED',
-        message: 'Account is blocked',
-      });
-    }
-
-    if (!receiverAccount || draft.currency !== receiverAccount.currency) {
-      throw new BadRequestException({
-        code: 'CURRENCY_MISMATCH',
-        message: 'Transfer cannot be completed because account currencies do not match.',
-      });
-    }
-
-    const amount = Number(draft.amount);
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      throw new BadRequestException({
-        code: 'INVALID_AMOUNT',
-        message: 'Transfer amount must be greater than zero.',
-      });
-    }
-
-    if (Number(senderAccount.balance) < amount) {
-      throw new UnprocessableEntityException({
-        code: 'INSUFFICIENT_FUNDS',
-        message: 'Insufficient funds',
-      });
-    }
-
-    // Calculate daily usage inside this transaction.
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const dailyAggregate = await tx.transaction.aggregate({
-      where: {
-        senderAccountId: senderId,
-        status: 'COMPLETED',
-        executedAt: { gte: today },
-      },
-      _sum: { amount: true },
+  if (!receiverAccount || draft.currency !== receiverAccount.currency) {
+    throw new BadRequestException({
+      code: 'CURRENCY_MISMATCH',
+      message: 'Transfer cannot be completed because account currencies do not match.',
     });
+  }
 
-    const dailyUsed = Number(dailyAggregate._sum.amount ?? 0);
+  const amount = Number(draft.amount);
 
-    if (dailyUsed + amount > Number(senderAccount.dailyLimit)) {
-      throw new UnprocessableEntityException({
-        code: 'DAILY_LIMIT_EXCEEDED',
-        message: 'Daily limit exceeded',
-      });
-    }
-
-    // Explicit conditional claim. The transaction rollback restores DRAFT
-    // if any subsequent operation fails.
-    const claimed = await tx.transaction.updateMany({
-      where: {
-        id: transferId,
-        status: 'DRAFT',
-      },
-      data: {
-        status: 'PROCESSING',
-      },
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new BadRequestException({
+      code: 'INVALID_AMOUNT',
+      message: 'Transfer amount must be greater than zero.',
     });
+  }
 
-    if (claimed.count !== 1) {
-      throw new NotFoundException({
-        code: 'TRANSFER_NOT_FOUND',
-        message: 'Transfer draft not found or already processed',
-      });
-    }
+  if (Number(senderAccount.balance) < amount) {
+    throw new UnprocessableEntityException({
+      code: 'INSUFFICIENT_FUNDS',
+      message: 'Insufficient funds',
+    });
+  }
 
-    const operationNumber = `OP-${Date.now()}-${randomInt(1000, 10000)}`;
-    const executedAt = new Date();
+  const dailyUsed = await this.calculateDailyUsed(tx, senderId);
 
-    const confirmationPayload = {
+  if (dailyUsed + amount > Number(senderAccount.dailyLimit)) {
+    throw new UnprocessableEntityException({
+      code: 'DAILY_LIMIT_EXCEEDED',
+      message: 'Daily limit exceeded',
+    });
+  }
+
+  const claimed = await tx.transaction.updateMany({
+    where: {
+      id: transferId,
+      status: 'DRAFT',
+    },
+    data: { status: 'PROCESSING' },
+  });
+
+  if (claimed.count !== 1) {
+    throw new NotFoundException({
+      code: 'TRANSFER_NOT_FOUND',
+      message: 'Transfer draft not found or already processed',
+    });
+  }
+
+  const operationNumber = `OP-${Date.now()}-${randomInt(1000, 10000)}`;
+  const executedAt = new Date();
+
+  const confirmationPayload = {
+    operationNumber,
+    senderIban: senderAccount.iban,
+    receiverIban: draft.receiverIban,
+    amount,
+    currency: draft.currency,
+    executedAt: executedAt.toISOString(),
+  };
+
+  const signature =
+    this.signatureService.signTransferConfirmation(confirmationPayload);
+
+  await tx.account.update({
+    where: { id: senderId },
+    data: { balance: { decrement: amount } },
+  });
+
+  await tx.account.update({
+    where: { id: receiverAccount.id },
+    data: { balance: { increment: amount } },
+  });
+
+  const completed = await tx.transaction.update({
+    where: { id: transferId },
+    data: {
+      status: 'COMPLETED',
       operationNumber,
-      senderIban: senderAccount.iban,
-      receiverIban: draft.receiverIban,
-      amount,
-      currency: draft.currency,
-      executedAt: executedAt.toISOString(),
-    };
-
-    const signature =
-      this.signatureService.signTransferConfirmation(confirmationPayload);
-
-    await tx.account.update({
-      where: { id: senderId },
-      data: { balance: { decrement: amount } },
-    });
-
-    await tx.account.update({
-      where: { id: receiverAccount.id },
-      data: { balance: { increment: amount } },
-    });
-
-    const completed = await tx.transaction.update({
-      where: { id: transferId },
-      data: {
-        status: 'COMPLETED',
-        operationNumber,
-        executedAt,
-        signature,
-      },
-    });
-
-    return {
-      completed,
-      confirmationPayload,
+      executedAt,
       signature,
-    };
+    },
   });
 
   return {
-    id: result.completed.id,
-    status: result.completed.status,
-    operationNumber: result.completed.operationNumber,
-    executedAt: result.completed.executedAt,
-    amount: Number(result.completed.amount),
-    currency: result.completed.currency,
-    signature: result.completed.signature ?? result.signature,
-    confirmationPayload: result.confirmationPayload,
+    id: completed.id,
+    status: completed.status,
+    operationNumber: completed.operationNumber,
+    executedAt: completed.executedAt,
+    amount: Number(completed.amount),
+    currency: completed.currency,
+    signature: completed.signature ?? signature,
+    confirmationPayload,
   };
 }
 
@@ -723,37 +751,74 @@ async cancelTransfer(transferId: string, user: AuthenticatedUser) {
   }
 
   async payPaymentRequest(requestId: string, user: AuthenticatedUser) {
-    const payReq = await this.prisma.paymentRequest.findUnique({ where: { id: requestId } });
-    if (!payReq || payReq.status !== 'PENDING') {
-      throw new NotFoundException({
-        code: 'PAYMENT_REQUEST_NOT_FOUND',
-        message: 'Payment request not found or already paid',
+    await this.ensureCustomerExists(user);
+
+    return this.prisma.$transaction(async (tx) => {
+      // Serialize payments for this PaymentRequest.
+      await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "PaymentRequest"
+        WHERE "id" = ${requestId}
+        FOR UPDATE
+        `;
+
+      // Always reload after acquiring the lock.
+      const payReq = await tx.paymentRequest.findUnique({
+        where: { id: requestId },
       });
-    }
 
-    const draft = await this.createTransferDraft(
-      {
-        receiverIban: payReq.receiverIban,
-        receiverName: payReq.receiverName,
-        amount: Number(payReq.amount),
-        title: payReq.title,
-      },
-      user,
-    );
+      if (!payReq || payReq.status !== 'PENDING') {
+        throw new NotFoundException({
+          code: 'PAYMENT_REQUEST_NOT_FOUND',
+          message: 'Payment request not found or already paid',
+        });
+      }
 
-    const confirmed = await this.confirmTransfer(draft.id, user);
+      // Mark as processing inside the same transaction.
+      const claimed = await tx.paymentRequest.updateMany({
+        where: {
+          id: requestId,
+          status: 'PENDING',
+        },
+        data: { status: 'PROCESSING' },
+      });
 
-    await this.prisma.paymentRequest.update({
-      where: { id: requestId },
-      data: {
-        status: 'PAID',
-        transactionId: confirmed.id,
-        paidAt: new Date(),
-      },
+      if (claimed.count !== 1) {
+        throw new NotFoundException({
+          code: 'PAYMENT_REQUEST_NOT_FOUND',
+          message: 'Payment request not found or already paid',
+        });
+      }
+
+      const draft = await this.createTransferDraftInTransaction(
+        tx,
+        {
+          receiverIban: payReq.receiverIban,
+          receiverName: payReq.receiverName,
+          amount: Number(payReq.amount),
+          title: payReq.title,
+        } as CreateTransactionDto,
+        user,
+      );
+
+      const confirmed = await this.confirmTransferInTransaction(
+        tx,
+        draft.id,
+        user,
+      );
+
+      await tx.paymentRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'PAID',
+          transactionId: confirmed.id,
+          paidAt: new Date(),
+        },
+      });
+
+      return confirmed;
     });
-
-    return confirmed;
-  }
+  } 
 
   // ==================== PARTNER API PAYMENT REQUESTS ====================
 

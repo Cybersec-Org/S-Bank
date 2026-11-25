@@ -6,7 +6,7 @@ import { SignatureService } from '../auth/signature.service.js';
 import { Role, type AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface.js';
 
 // Safety guard: integration tests must never run against the development database.
-const databaseUrl = process.env.DATABASE_URL;
+const databaseUrl = process.env['DATABASE_URL'];
 
 if (!databaseUrl || new URL(databaseUrl).pathname !== '/sbank_test') {
   throw new Error(
@@ -25,6 +25,7 @@ describe('AccountsService transfer concurrency (PostgreSQL)', () => {
   const customerIds: string[] = [];
   const accountIds: string[] = [];
   const transactionIds: string[] = [];
+  const paymentRequestIds: string[] = [];
 
   const userFor = (id: string): AuthenticatedUser => ({
     id,
@@ -42,11 +43,30 @@ describe('AccountsService transfer concurrency (PostgreSQL)', () => {
   });
 
   afterEach(async () => {
+    
+    if (paymentRequestIds.length) {
+      await prisma.paymentRequest.deleteMany({
+        where: { id: { in: [...paymentRequestIds] } },
+      });
+      paymentRequestIds.length = 0;
+    }
+
     if (transactionIds.length) {
       await prisma.transaction.deleteMany({
         where: { id: { in: [...transactionIds] } },
       });
       transactionIds.length = 0;
+    }
+
+    if (accountIds.length) {
+      await prisma.transaction.deleteMany({
+        where: {
+          OR: [
+            { senderAccountId: { in: [...accountIds] } },
+            { receiverAccountId: { in: [...accountIds] } },
+          ],
+        },
+      });
     }
 
     if (accountIds.length) {
@@ -328,5 +348,60 @@ describe('AccountsService transfer concurrency (PostgreSQL)', () => {
 
     expect(Number(accountA.balance)).toBe(100);
     expect(Number(accountB.balance)).toBe(100);
+  });
+
+  it('should pay the same payment request only once when called concurrently', async () => {
+    const fixture = await createFixture(500);
+
+    const paymentRequest = await prisma.paymentRequest.create({
+      data: {
+        partnerId: 'integration-test-partner',
+        receiverIban: fixture.receiver.iban,
+        receiverName: 'Integration Receiver',
+        amount: 100,
+        currency: 'PLN',
+        title: 'Concurrent payment request test',
+        status: 'PENDING',
+      },
+    });
+
+    paymentRequestIds.push(paymentRequest.id);
+
+    const results = await Promise.allSettled([
+      accountsService.payPaymentRequest(paymentRequest.id, fixture.user),
+      accountsService.payPaymentRequest(paymentRequest.id, fixture.user),
+    ]);
+
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((r) => r.status === 'rejected')).toHaveLength(1);
+
+    const [storedRequest, sender, receiver, completedTransactions] =
+      await Promise.all([
+        prisma.paymentRequest.findUniqueOrThrow({
+          where: { id: paymentRequest.id },
+        }),
+        prisma.account.findUniqueOrThrow({
+          where: { id: fixture.sender.id },
+        }),
+        prisma.account.findUniqueOrThrow({
+          where: { id: fixture.receiver.id },
+        }),
+        prisma.transaction.findMany({
+          where: {
+            senderAccountId: fixture.sender.id,
+            receiverAccountId: fixture.receiver.id,
+            status: 'COMPLETED',
+          },
+        }),
+      ]);
+
+    transactionIds.push(...completedTransactions.map((tx) => tx.id));
+
+    expect(storedRequest.status).toBe('PAID');
+    expect(storedRequest.transactionId).toBeTruthy();
+    expect(completedTransactions).toHaveLength(1);
+    expect(completedTransactions[0]?.id).toBe(storedRequest.transactionId);
+    expect(Number(sender.balance)).toBe(400);
+    expect(Number(receiver.balance)).toBe(100);
   });
 });
