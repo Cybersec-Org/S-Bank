@@ -6,6 +6,11 @@ import { Action, CaslAbilityFactory } from '../auth/casl-ability.factory.js';
 import { PoliciesGuard } from '../auth/policies.guard.js';
 import { UserAuthGuard } from '../auth/user-auth.guard.js';
 import { Role, type AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface.js';
+import { Reflector } from '@nestjs/core';
+
+const reflector = {
+  getAllAndOverride: jest.fn<Reflector['getAllAndOverride']>(),
+};
 
 describe('AccountsController authorization', () => {
   let controller: AccountsController;
@@ -13,44 +18,74 @@ describe('AccountsController authorization', () => {
   let policiesGuard: PoliciesGuard;
   const abilityFactory = new CaslAbilityFactory();
 
+  const user = (
+    role: Role,
+    id: string,
+  ): AuthenticatedUser => ({
+    id,
+    role,
+    ipAddress: '127.0.0.1',
+    acr: '2',
+  });
+
+  const authorize = (
+    handlerName: string,
+    currentUser?: AuthenticatedUser,
+  ): boolean => {
+    const handler = controller[handlerName as keyof AccountsController];
+
+    if (typeof handler !== 'function') {
+      throw new Error(`Unknown controller handler: ${handlerName}`);
+    }
+
+  const context = {
+    getHandler: () => handler,
+    getClass: () => AccountsController,
+    switchToHttp: () => ({
+      getRequest: () => ({ user: currentUser }),
+    }),
+  } as any;
+
+  return policiesGuard.canActivate(context) as boolean;
+};
+
   beforeEach(() => {
     service = {
-      findAllForUser: jest.fn().mockResolvedValue([]),
-      getAuditLogs: jest.fn().mockResolvedValue([]),
-      getSystemConfig: jest.fn().mockResolvedValue({}),
-      createTransferDraft: jest.fn().mockResolvedValue({}),
-      getCustomerDetails: jest.fn().mockResolvedValue({}),
-      getRecipients: jest.fn().mockResolvedValue([]),
+      findAllForUser: jest.fn<AccountsService['findAllForUser']>()
+        .mockResolvedValue([]),
+      getAuditLogs: jest.fn<AccountsService['getAuditLogs']>()
+        .mockResolvedValue([]),
+      getSystemConfig: jest.fn<AccountsService['getSystemConfig']>()
+        .mockResolvedValue({
+          id: 'global',
+          stepUpThreshold: 1000,
+          minDailyLimit: 100,
+          maxDailyLimit: 50000,
+          updatedAt: new Date(),
+        }),
+      createTransferDraft: jest.fn<AccountsService['createTransferDraft']>(),
+      getCustomerDetails: jest.fn<AccountsService['getCustomerDetails']>(),
+      getRecipients: jest.fn<AccountsService['getRecipients']>()
+        .mockResolvedValue([]),
     };
 
     controller = new AccountsController(service as AccountsService);
+
+    const reflector = {
+      getAllAndOverride: jest.fn<PoliciesGuardReflector['getAllAndOverride']>(),
+    };
+
+    reflector.getAllAndOverride.mockImplementation((_key, targets) => {
+      const metadata = Reflect.getMetadata(_key as string, targets[0]!);
+      return metadata ?? Reflect.getMetadata(_key as string, targets[1]!);
+    });
+
     policiesGuard = new PoliciesGuard(
-      {
-        getAllAndOverride: (key: string, targets: object[]) => {
-          const metadata = Reflect.getMetadata(key, targets[0]);
-          return metadata ?? Reflect.getMetadata(key, targets[1]);
-        },
-      } as any,
+      reflector as unknown as Reflector,
       abilityFactory,
     );
   });
-
-  const user = (role: Role, id: string): AuthenticatedUser =>
-    ({ id, role }) as AuthenticatedUser;
-
-  const authorize = (method: keyof AccountsController, currentUser?: AuthenticatedUser) => {
-    const handler = AccountsController.prototype[method] as Function;
-    const context = {
-      getHandler: () => handler,
-      getClass: () => AccountsController,
-      switchToHttp: () => ({
-        getRequest: () => ({ user: currentUser }),
-      }),
-    } as any;
-
-    return policiesGuard.canActivate(context);
-  };
-
+  
   it('allows a client to list accounts', async () => {
     const client = user(Role.CLIENT, 'client-1');
 
