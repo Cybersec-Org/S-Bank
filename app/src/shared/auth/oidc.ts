@@ -1,6 +1,5 @@
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
-import { Platform } from 'react-native';
 import { z } from 'zod';
 
 import { env } from '@/shared/config/env';
@@ -211,10 +210,6 @@ export async function signOutFromOidc(tokens: {
       ...(tokens.idToken === undefined ? {} : { id_token_hint: tokens.idToken }),
     });
     const logoutUrl = `${discovery.endSessionEndpoint}?${params.toString()}`;
-    if (Platform.OS === 'web') {
-      await WebBrowser.openAuthSessionAsync(logoutUrl, redirectUri).catch(() => undefined);
-    } else {
-      await WebBrowser.openAuthSessionAsync(logoutUrl, redirectUri).catch(() => undefined);
-    }
+    await WebBrowser.openAuthSessionAsync(logoutUrl, redirectUri).catch(() => undefined);
   }
 }
