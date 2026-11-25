@@ -33,11 +33,14 @@ async function main() {
   });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   console.log('Creating bank accounts...');
   const acc1 = await prisma.account.create({
     data: {
       iban: 'PL04102010260000140202736451',
 =======
+=======
+>>>>>>> origin/passkeys-and-stepup
   console.log('Creating demo bank accounts...');
 
   const acc1 = await prisma.account.upsert({
@@ -68,6 +71,7 @@ async function main() {
   });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   await prisma.account.create({
     data: {
       iban: 'PL74102010260000140202736452',
@@ -83,6 +87,8 @@ async function main() {
     data: {
       iban: 'PL47102010260000140202736453',
 =======
+=======
+>>>>>>> origin/passkeys-and-stepup
   const acc2 = await prisma.account.upsert({
     where: { iban: 'PL99102010260000140202736451' },
     update: {},

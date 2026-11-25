@@ -21,7 +21,11 @@ export class CreateTransactionDto {
   senderAccountId?: string;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   @ApiProperty({ example: 'PL47102010260000140202736453', description: 'Receiver IBAN' })
+=======
+  @ApiProperty({ example: 'PL99102010260000140202736451', description: 'Receiver IBAN (PL + 26 digits)' })
+>>>>>>> origin/passkeys-and-stepup
 =======
   @ApiProperty({ example: 'PL99102010260000140202736451', description: 'Receiver IBAN (PL + 26 digits)' })
 >>>>>>> origin/passkeys-and-stepup

@@ -48,6 +48,7 @@ interface SessionStoreOptions {
 const STEP_UP_LEVEL: AssuranceLevel = '2';
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 /**
  * In-memory session. It never persists anything and holds no tokens yet (B-10, B-14 add them).
  * The mock entry points refuse to work unless the store was created for mock mode.
@@ -57,6 +58,8 @@ export function createSessionStore({
   principals = MOCK_PRINCIPALS,
 }: SessionStoreOptions): SessionStore {
 =======
+=======
+>>>>>>> origin/passkeys-and-stepup
 export function createSessionStore({ mockEnabled }: SessionStoreOptions): SessionStore {
 >>>>>>> origin/passkeys-and-stepup
   let state: SessionState = { status: 'signedOut' };

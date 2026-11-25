@@ -23,6 +23,7 @@ describe('createRepositories', () => {
     expect(repositories.accounts.listAccounts).toBeDefined();
     expect(repositories.transfers.getDraft).toBeDefined();
     expect(repositories.rates.getRatesTable).toBeDefined();
+<<<<<<< HEAD
   });
 
   it('uses the dev API for screens it supports and demo data for the rest in hybrid mode', async () => {
@@ -38,5 +39,7 @@ describe('createRepositories', () => {
 
   it('refuses hybrid mode without the API address and identity', () => {
     expect(() => createRepositories({ mode: 'hybrid', getAcr })).toThrow(/Hybrid/);
+=======
+>>>>>>> origin/passkeys-and-stepup
   });
 });
