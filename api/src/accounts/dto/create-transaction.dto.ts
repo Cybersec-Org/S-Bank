@@ -7,7 +7,7 @@ export class CreateTransactionDto {
   @IsString()
   senderAccountId?: string;
 
-  @ApiProperty({ example: 'PL99102010260000140202736451', description: 'Receiver IBAN' })
+  @ApiProperty({ example: 'PL47102010260000140202736453', description: 'Receiver IBAN' })
   @IsString()
   @Length(28, 28)
   receiverIban!: string;

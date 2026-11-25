@@ -18,7 +18,10 @@ export function useApiMode(): ApiMode {
   return useContext(ApiModeContext);
 }
 
-/** The single switch for everything that exists only for demonstration (role switcher, MockBadge). */
+/**
+ * The single switch for everything that exists only for demonstration (demo sign-in, role switcher, MockBadge,
+ * simulated passkey step-up). On in `mock` and in the development-only `hybrid` mode, never in `live`.
+ */
 export function useIsMockMode(): boolean {
-  return useApiMode() === 'mock';
+  return useApiMode() !== 'live';
 }

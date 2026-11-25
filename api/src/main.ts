@@ -26,8 +26,10 @@ async function bootstrap() {
   }));
 
   const port = Number(process.env['PORT'] ?? 3000);
-  await app.listen(port, '127.0.0.1');
-  console.log(`Api: http://localhost:${port}`);
+  // Loopback by default: identity still comes from mock headers. Set HOST=0.0.0.0 to reach the API from a phone on the LAN.
+  const host = process.env['HOST'] ?? '127.0.0.1';
+  await app.listen(port, host);
+  console.log(`Api: http://${host}:${port}`);
   console.log(`Swagger: http://localhost:${port}/docs`);
 }
 

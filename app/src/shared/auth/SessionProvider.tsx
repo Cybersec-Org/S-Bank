@@ -1,7 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from 'react';
 
-import { useIsMockMode } from '@/shared/config/ApiModeProvider';
+import { useApiMode, useIsMockMode } from '@/shared/config/ApiModeProvider';
+
+import { DEV_API_PRINCIPALS } from './dev-api-identity';
 
 import { hasRole, type AssuranceLevel, type Principal, type Role } from './roles';
 import { createSessionStore, type SessionStore } from './session-store';
@@ -27,9 +29,15 @@ interface SessionProviderProps {
 
 export function SessionProvider({ children, store }: SessionProviderProps) {
   const mockEnabled = useIsMockMode();
+  const mode = useApiMode();
   const resolvedStore = useMemo(
-    () => store ?? createSessionStore({ mockEnabled }),
-    [store, mockEnabled],
+    () =>
+      store ??
+      createSessionStore({
+        mockEnabled,
+        ...(mode === 'hybrid' ? { principals: DEV_API_PRINCIPALS } : {}),
+      }),
+    [store, mockEnabled, mode],
   );
   return (
     <SessionStoreContext.Provider value={resolvedStore}>{children}</SessionStoreContext.Provider>

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useRepositories } from '@/shared/api/RepositoriesProvider';
 import { SENSITIVE_QUERY_OPTIONS } from '@/shared/api/query-options';
-import { isUuid } from '@/shared/lib/ids';
+import { isResourceId } from '@/shared/lib/ids';
 
 import { isSearchLongEnough } from '../model/customer';
 import { employeeKeys } from '../model/query-keys';
@@ -21,7 +21,7 @@ export function useCustomerSearchQuery(submittedQuery: string) {
 /** The customer id comes from the URL; its shape is validated before the API is called. */
 export function useCustomerDetailsQuery(customerId: unknown) {
   const { employee } = useRepositories();
-  const validId = isUuid(customerId) ? customerId : null;
+  const validId = isResourceId(customerId) ? customerId : null;
   return useQuery({
     queryKey: employeeKeys.details(validId ?? 'invalid'),
     queryFn: () => {

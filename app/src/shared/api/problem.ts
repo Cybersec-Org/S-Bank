@@ -12,6 +12,10 @@ const HTTP_UNPROCESSABLE = 422;
 const HTTP_BAD_REQUEST = 400;
 const HTTP_TOO_MANY_REQUESTS = 429;
 const HTTP_SERVER_ERROR_MIN = 500;
+/** Status of a request that never got an HTTP response (offline, DNS, refused connection). */
+export const HTTP_NO_RESPONSE = 0;
+/** Status used when the server answered 2xx with a body the app cannot read. */
+export const HTTP_BAD_GATEWAY = 502;
 
 /** Problems the app has a specific Polish message for. */
 export const PROBLEM_CODES = [
@@ -21,14 +25,20 @@ export const PROBLEM_CODES = [
   'invalid_iban',
   'request_expired',
   'account_blocked',
+  'recipient_not_found',
+  'same_account_transfer',
 ] as const;
 export type ProblemCode = (typeof PROBLEM_CODES)[number];
 
-/** RFC 9457 problem details as sent by the API. Only these members are read; `detail` is never shown. */
+/**
+ * Error body. Two shapes are understood: RFC 9457 problem details (`type` URI) and the dev API's
+ * `{ code: 'INSUFFICIENT_FUNDS', message }`. Only these members are read; server text is never shown.
+ */
 const problemBodySchema = z.object({
   type: z.string().optional(),
   title: z.string().optional(),
   status: z.number().int().optional(),
+  code: z.string().optional(),
 });
 
 const PROBLEM_TYPE_PREFIX = '/problems/';
@@ -75,7 +85,7 @@ export function parseProblem(body: unknown, httpStatus: number): ApiProblem {
   }
   return new ApiProblem({
     status: httpStatus,
-    code: codeFromType(parsed.data.type),
+    code: codeFromType(parsed.data.type) ?? toKnownCode(parsed.data.code?.toLowerCase()),
     title: parsed.data.title,
     type: parsed.data.type,
   });
@@ -92,10 +102,14 @@ const CODE_MESSAGES: Readonly<Record<ProblemCode, string>> = {
   invalid_iban: pl.errors.invalidIban,
   request_expired: pl.errors.requestExpired,
   account_blocked: pl.errors.accountBlocked,
+  recipient_not_found: pl.errors.recipientNotFound,
+  same_account_transfer: pl.errors.sameAccountTransfer,
 };
 
 function messageForStatus(status: number): string {
   switch (status) {
+    case HTTP_NO_RESPONSE:
+      return pl.errors.network;
     case HTTP_BAD_REQUEST:
     case HTTP_UNPROCESSABLE:
       return pl.errors.validation;

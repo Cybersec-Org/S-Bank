@@ -12,7 +12,7 @@ import { describeProblem, isNotFoundProblem } from '@/shared/api/problem';
 import { pl } from '@/shared/i18n/pl';
 import { formatDate } from '@/shared/lib/dates';
 import { maskIban } from '@/shared/lib/iban';
-import { isUuid } from '@/shared/lib/ids';
+import { isResourceId } from '@/shared/lib/ids';
 import { formatMoney, formatWholeMoney } from '@/shared/lib/money';
 import { useGoBack } from '@/shared/navigation/useGoBack';
 import {
@@ -62,7 +62,7 @@ export function CustomerDetailsScreen() {
   const details = detailsQuery.data;
 
   function renderBody() {
-    if (!isUuid(customerId)) {
+    if (!isResourceId(customerId)) {
       return <ErrorState message={pl.employee.invalidLink} />;
     }
     if (detailsQuery.isPending) {

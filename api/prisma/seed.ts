@@ -33,7 +33,7 @@ async function main() {
   console.log('Creating bank accounts...');
   const acc1 = await prisma.account.create({
     data: {
-      iban: 'PL11102010260000140202736451',
+      iban: 'PL04102010260000140202736451',
       ownerId: 'client-1',
       currency: 'PLN',
       balance: 5000.00,
@@ -44,7 +44,7 @@ async function main() {
 
   await prisma.account.create({
     data: {
-      iban: 'PL22102010260000140202736452',
+      iban: 'PL74102010260000140202736452',
       ownerId: 'client-1',
       currency: 'EUR',
       balance: 1200.50,
@@ -55,7 +55,7 @@ async function main() {
 
   const acc2 = await prisma.account.create({
     data: {
-      iban: 'PL99102010260000140202736451',
+      iban: 'PL47102010260000140202736453',
       ownerId: 'client-2',
       currency: 'PLN',
       balance: 1500.00,

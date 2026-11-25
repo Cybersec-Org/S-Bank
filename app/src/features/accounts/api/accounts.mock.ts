@@ -12,14 +12,7 @@ import {
   resolveMockOptions,
   type MockOptions,
 } from '@/shared/api/mock/mock-runner';
-import { toBankDay } from '@/shared/lib/dates';
-
-import {
-  isPaymentKind,
-  type Account,
-  type Transaction,
-  type TransactionQuery,
-} from '../model/account';
+import { applyTransactionQuery, type Account, type Transaction } from '../model/account';
 import type { AccountsRepository } from './accounts.repository';
 
 const HTTP_NOT_FOUND = 404;
@@ -40,16 +33,6 @@ function initialAccounts(): Account[] {
 
 function initialTransactions(): Transaction[] {
   return demoTransactions(MOCK_MAIN_ACCOUNT_ID, 1000);
-}
-
-function matchesQuery(transaction: Transaction, query: TransactionQuery): boolean {
-  const day = toBankDay(transaction.bookedAt);
-  return (
-    (query.from === null || day >= query.from) &&
-    (query.to === null || day <= query.to) &&
-    (query.direction === null || transaction.direction === query.direction) &&
-    (!query.paymentsOnly || isPaymentKind(transaction.kind))
-  );
 }
 
 /** Deterministic in-memory accounts; also acts as the mock ledger the transfer mocks debit. */
@@ -77,11 +60,10 @@ export function createMockAccountsRepository(
         if (runner.empty) {
           return [];
         }
-        const matching = transactions
-          .filter((transaction) => transaction.accountId === accountId)
-          .filter((transaction) => matchesQuery(transaction, query))
-          .sort((left, right) => right.bookedAt.localeCompare(left.bookedAt));
-        return query.limit === null ? matching : matching.slice(0, query.limit);
+        return applyTransactionQuery(
+          transactions.filter((transaction) => transaction.accountId === accountId),
+          query,
+        );
       }),
     primaryAccountId: () => accounts[0]?.id ?? null,
     getAccountSnapshot: (accountId) => {

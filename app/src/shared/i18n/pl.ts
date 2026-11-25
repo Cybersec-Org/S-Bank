@@ -15,6 +15,9 @@ export const pl = {
     notNow: 'Nie teraz',
     mockBadge: 'DANE DEMONSTRACYJNE (MOCK)',
     mockBadgeHint: 'Aplikacja działa na danych demonstracyjnych, bez połączenia z serwerem banku.',
+    devApiBadge: 'SERWER DEWELOPERSKI',
+    devApiBadgeHint:
+      'Rachunki, historia, przelewy, kursy i panel pracownika pochodzą z serwera deweloperskiego, pozostałe funkcje z danych demonstracyjnych.',
     emptyTitle: 'Brak danych',
     emptyMessage: 'Nie ma tu jeszcze nic do pokazania.',
     errorTitle: 'Nie udało się wczytać danych',
@@ -41,6 +44,10 @@ export const pl = {
     invalidIban: 'Numer rachunku jest niepoprawny.',
     requestExpired: 'To żądanie płatności wygasło.',
     accountBlocked: 'Rachunek jest zablokowany.',
+    recipientNotFound:
+      'Nie znaleziono rachunku odbiorcy w S-Banku. Przelewy do innych banków nie są jeszcze dostępne.',
+    sameAccountTransfer: 'Nie można wysłać przelewu na ten sam rachunek.',
+    network: 'Brak połączenia z serwerem banku. Sprawdź internet i spróbuj ponownie.',
     notImplementedYet: (backlogId: string): string =>
       `Ta funkcja nie jest jeszcze dostępna w trybie z prawdziwym serwerem (zadanie ${backlogId}).`,
     boundaryTitle: 'Wystąpił nieoczekiwany błąd',
@@ -98,8 +105,10 @@ export const pl = {
   },
   rates: {
     title: 'Kursy walut',
-    subtitle: (tableNumber: string, date: string): string =>
-      `Kursy średnie NBP · tabela ${tableNumber} z ${date}`,
+    subtitle: (tableNumber: string | null, date: string): string =>
+      tableNumber === null
+        ? `Kursy średnie NBP z ${date}`
+        : `Kursy średnie NBP · tabela ${tableNumber} z ${date}`,
     converterHeading: 'Przelicznik',
     amountLabel: 'Kwota w złotych',
     amountHint: 'Na przykład 250,00',
@@ -162,6 +171,7 @@ export const pl = {
     recentEmptyMessage: 'Gdy pojawią się pierwsze operacje, zobaczysz je tutaj.',
     emptyAccountsTitle: 'Brak rachunków',
     emptyAccountsMessage: 'Rachunek demonstracyjny zostanie założony po pierwszym logowaniu.',
+    defaultAccountName: 'Osobisty',
   },
   history: {
     title: 'Historia operacji',
@@ -177,6 +187,7 @@ export const pl = {
     typeIncoming: 'Przychodzące',
     typeOutgoing: 'Wychodzące',
     typePayments: 'Płatności',
+    incomingCounterparty: 'Przelew przychodzący',
     emptyTitle: 'Brak operacji',
     emptyMessage: 'Dla wybranych filtrów nie znaleziono żadnych operacji.',
   },
@@ -359,7 +370,7 @@ export const pl = {
     detailsTitle: 'Dane klienta',
     readOnlyBannerTitle: 'Podgląd tylko do odczytu.',
     readOnlyBanner: 'Otwarcie danych tego klienta zostało zapisane w dzienniku audytowym.',
-    customerMeta: (email: string, number: number): string => `${email} · klient nr ${number}`,
+    customerMeta: (email: string, number: string): string => `${email} · klient nr ${number}`,
     accountsHeading: 'Rachunki',
     historyHeading: 'Historia operacji',
     historyEmpty: 'Brak operacji do wyświetlenia.',

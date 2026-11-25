@@ -1,3 +1,5 @@
+import { toBankDay } from '@/shared/lib/dates';
+
 export type AccountStatus = 'active' | 'blocked';
 
 // B-12: switch to the generated schema type once GET /api/accounts exists.
@@ -74,4 +76,25 @@ export function signedAmountGrosze(transaction: Transaction): number {
   return transaction.direction === 'outgoing'
     ? -transaction.amountGrosze
     : transaction.amountGrosze;
+}
+
+function matchesQuery(transaction: Transaction, query: TransactionQuery): boolean {
+  const day = toBankDay(transaction.bookedAt);
+  return (
+    (query.from === null || day >= query.from) &&
+    (query.to === null || day <= query.to) &&
+    (query.direction === null || transaction.direction === query.direction) &&
+    (!query.paymentsOnly || isPaymentKind(transaction.kind))
+  );
+}
+
+/** Filters, sorts newest first and limits; used where the data source cannot filter by itself. */
+export function applyTransactionQuery(
+  transactions: readonly Transaction[],
+  query: TransactionQuery,
+): readonly Transaction[] {
+  const matching = transactions
+    .filter((transaction) => matchesQuery(transaction, query))
+    .sort((left, right) => right.bookedAt.localeCompare(left.bookedAt));
+  return query.limit === null ? matching : matching.slice(0, query.limit);
 }

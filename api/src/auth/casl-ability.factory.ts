@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { AbilityBuilder, Ability, type InferSubjects, type ExtractSubjectType } from '@casl/ability';
+import {
+  AbilityBuilder,
+  createMongoAbility,
+  type ExtractSubjectType,
+  type InferSubjects,
+  type MongoAbility,
+} from '@casl/ability';
 import { type AuthenticatedUser, Role } from './interfaces/authenticated-user.interface.js';
 
 export enum Action {
@@ -20,12 +26,12 @@ export class AccountSubject {
 
 export type Subjects = InferSubjects<typeof AccountSubject> | 'Account' | 'AuditLog' | 'Customer' | 'all';
 export type AppSubjects = Subjects;
-export type AppAbility = Ability<[Action, Subjects]>;
+export type AppAbility = MongoAbility<[Action, Subjects]>;
 
 @Injectable()
 export class CaslAbilityFactory {
   createForUser(user: AuthenticatedUser): AppAbility {
-    const { can, cannot, build } = new AbilityBuilder<AppAbility>(Ability);
+    const { can, cannot, build } = new AbilityBuilder<AppAbility>(createMongoAbility);
 
     if (user.role === Role.ADMIN) {
       can(Action.Manage, 'all');

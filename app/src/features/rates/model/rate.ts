@@ -9,7 +9,8 @@ export interface Rate {
 }
 
 export interface RatesTable {
-  readonly tableNumber: string;
+  /** NBP table id such as `196/A/NBP/2026`; `null` when the source does not report it. */
+  readonly tableNumber: string | null;
   readonly effectiveDate: string;
   readonly rates: readonly Rate[];
 }

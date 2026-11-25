@@ -18,6 +18,8 @@ export interface SessionStore {
 
 interface SessionStoreOptions {
   readonly mockEnabled: boolean;
+  /** Demo identities offered by `signInAsMock`; hybrid mode passes the dev API's seeded users. */
+  readonly principals?: Readonly<Record<Role, Principal>>;
 }
 
 const STEP_UP_LEVEL: AssuranceLevel = '2';
@@ -26,7 +28,10 @@ const STEP_UP_LEVEL: AssuranceLevel = '2';
  * In-memory session. It never persists anything and holds no tokens yet (B-10, B-14 add them).
  * The mock entry points refuse to work unless the store was created for mock mode.
  */
-export function createSessionStore({ mockEnabled }: SessionStoreOptions): SessionStore {
+export function createSessionStore({
+  mockEnabled,
+  principals = MOCK_PRINCIPALS,
+}: SessionStoreOptions): SessionStore {
   let state: SessionState = { status: 'signedOut' };
   const listeners = new Set<Listener>();
 
@@ -51,7 +56,7 @@ export function createSessionStore({ mockEnabled }: SessionStoreOptions): Sessio
     },
     signInAsMock: (role) => {
       requireMock();
-      setState({ status: 'signedIn', principal: MOCK_PRINCIPALS[role] });
+      setState({ status: 'signedIn', principal: principals[role] });
     },
     raiseMockAssurance: () => {
       requireMock();

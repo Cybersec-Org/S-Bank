@@ -18,6 +18,19 @@ describe('parseEnv', () => {
     expect(parseEnv({ EXPO_PUBLIC_API_MODE: 'live' }, false).apiMode).toBe('live');
   });
 
+  it('accepts hybrid mode in development builds', () => {
+    expect(parseEnv({ EXPO_PUBLIC_API_MODE: 'hybrid' }, false).apiMode).toBe('hybrid');
+  });
+
+  it('refuses hybrid mode in production builds, because it sends spoofable identity headers', () => {
+    expect(() =>
+      parseEnv(
+        { EXPO_PUBLIC_API_MODE: 'hybrid', EXPO_PUBLIC_API_BASE_URL: 'https://api.example.test' },
+        true,
+      ),
+    ).toThrow(/apiMode/);
+  });
+
   it('rejects an unknown mode and names the variable without echoing values', () => {
     expect(() => parseEnv({ EXPO_PUBLIC_API_MODE: 'demo' }, false)).toThrow(/apiMode/);
     expect(() => parseEnv({ EXPO_PUBLIC_API_MODE: 'demo' }, false)).not.toThrow(/demo/);

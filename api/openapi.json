@@ -576,6 +576,34 @@
           "Banking API"
         ]
       }
+    },
+    "/api/payments/test": {
+      "get": {
+        "operationId": "PartnersController_getPayments",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Partners"
+        ]
+      }
+    },
+    "/api/reports/test": {
+      "get": {
+        "operationId": "PartnersController_getReports",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Partners"
+        ]
+      }
     }
   },
   "info": {
@@ -628,7 +656,7 @@
           },
           "receiverIban": {
             "type": "string",
-            "example": "PL99102010260000140202736451",
+            "example": "PL47102010260000140202736453",
             "description": "Receiver IBAN"
           },
           "receiverName": {

@@ -70,7 +70,7 @@ describe('CustomerDetailsScreen', () => {
     expect(await screen.findByText('Anna Nowak')).toBeOnTheScreen();
     expect(screen.getByText(pl.employee.readOnlyBannerTitle)).toBeOnTheScreen();
     expect(
-      screen.getByText(pl.employee.customerMeta('anna.nowak@example.com', 1007)),
+      screen.getByText(pl.employee.customerMeta('anna.nowak@example.com', 'CUST-1007')),
     ).toBeOnTheScreen();
     expect(screen.getByText(pl.employee.statusActive)).toBeOnTheScreen();
     expect(screen.getByText(pl.employee.accountRow('Osobisty', '•••• 4821'))).toBeOnTheScreen();

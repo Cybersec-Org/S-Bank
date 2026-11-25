@@ -6,7 +6,8 @@ export interface CustomerSummary {
   readonly id: string;
   readonly displayName: string;
   readonly email: string;
-  readonly customerNumber: number;
+  /** As issued by the bank, e.g. `CUST-1001`. */
+  readonly customerNumber: string;
 }
 
 export interface CustomerDetails {

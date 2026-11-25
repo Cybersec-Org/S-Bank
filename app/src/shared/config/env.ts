@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-export const API_MODES = ['mock', 'live'] as const;
+/**
+ * `mock`: in-memory demo data. `hybrid` (development only): screens with an API counterpart talk to the dev API,
+ * the rest stays on demo data, and the demo identity travels in the API's `x-user-id` / `x-user-role` headers.
+ * `live`: the real API with real sign-in.
+ */
+export const API_MODES = ['mock', 'hybrid', 'live'] as const;
 export type ApiMode = (typeof API_MODES)[number];
 
 const DEFAULT_API_BASE_URL = 'https://localhost';
@@ -34,6 +39,11 @@ function emptyToUndefined(value: string | undefined): string | undefined {
  */
 export function parseEnv(raw: RawPublicEnv, isProduction: boolean): AppEnv {
   const result = rawEnvSchema
+    .refine((value) => !isProduction || value.apiMode !== 'hybrid', {
+      path: ['apiMode'],
+      message:
+        'hybrid mode sends spoofable identity headers and is not allowed in production builds',
+    })
     .refine((value) => !isProduction || value.apiBaseUrl.startsWith('https://'), {
       path: ['apiBaseUrl'],
       message: 'must use https in production builds',

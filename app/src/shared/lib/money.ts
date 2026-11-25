@@ -92,3 +92,24 @@ export function formatAmountInput(minorUnits: number): string {
   const fraction = String(minorUnits % GROSZE_PER_ZLOTY).padStart(2, '0');
   return `${whole},${fraction}`;
 }
+
+/**
+ * Boundary conversion for an API that sends złoty as a JSON number (`150.5`). The value is rounded to whole
+ * grosze once, here, so floating point never reaches the rest of the app.
+ */
+export function zlotyToGrosze(zloty: number): number {
+  return Math.round(zloty * GROSZE_PER_ZLOTY);
+}
+
+/** Inverse boundary conversion for request bodies; the result has at most two decimals. */
+export function groszeToZloty(grosze: number): number {
+  if (!Number.isSafeInteger(grosze)) {
+    throw new RangeError('Amount must be a safe integer number of grosze');
+  }
+  return grosze / GROSZE_PER_ZLOTY;
+}
+
+/** Exchange rate given as a JSON number (`4.3789`) scaled by 10 000 to an integer (`43789`). */
+export function scaleRate(rate: number): number {
+  return Math.round(rate * RATE_SCALE);
+}

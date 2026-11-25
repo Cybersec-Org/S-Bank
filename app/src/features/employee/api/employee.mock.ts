@@ -22,19 +22,19 @@ const CUSTOMERS: readonly CustomerSummary[] = [
     id: MOCK_CUSTOMER_ANNA_ID,
     displayName: 'Anna Nowak',
     email: 'anna.nowak@example.com',
-    customerNumber: 1007,
+    customerNumber: 'CUST-1007',
   },
   {
     id: MOCK_CUSTOMER_PIOTR_ID,
     displayName: 'Piotr Fikcyjny',
     email: 'piotr.fikcyjny@example.test',
-    customerNumber: 1012,
+    customerNumber: 'CUST-1012',
   },
   {
     id: MOCK_CUSTOMER_ZOFIA_ID,
     displayName: 'Zofia Wzorcowa',
     email: 'zofia.wzorcowa@example.test',
-    customerNumber: 1018,
+    customerNumber: 'CUST-1018',
   },
 ];
 

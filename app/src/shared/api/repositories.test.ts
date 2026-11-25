@@ -1,4 +1,6 @@
-import { createRepositories } from './repositories';
+import { createFakeDevApi, FAKE_DEV_API_URL } from '@/shared/testing/fake-dev-api';
+
+import { createHybridRepositories, createRepositories } from './repositories';
 
 const getAcr = () => '1' as const;
 
@@ -20,5 +22,20 @@ describe('createRepositories', () => {
     });
     await expect(repositories.transfers.getDraft('x')).rejects.toMatchObject({ backlogId: 'B-18' });
     await expect(repositories.rates.getRatesTable()).rejects.toMatchObject({ backlogId: 'B-15' });
+  });
+
+  it('uses the dev API for screens it supports and demo data for the rest in hybrid mode', async () => {
+    const { transport, requests } = createFakeDevApi({
+      'GET /public/rates': { body: { effectiveDate: '2026-11-10', rates: [] } },
+    });
+    const repositories = createHybridRepositories(getAcr, transport);
+
+    await expect(repositories.rates.getRatesTable()).resolves.toMatchObject({ rates: [] });
+    await expect(repositories.recipients.listRecipients()).resolves.not.toHaveLength(0);
+    expect(requests.map((request) => request.url)).toEqual([`${FAKE_DEV_API_URL}/public/rates`]);
+  });
+
+  it('refuses hybrid mode without the API address and identity', () => {
+    expect(() => createRepositories({ mode: 'hybrid', getAcr })).toThrow(/Hybrid/);
   });
 });

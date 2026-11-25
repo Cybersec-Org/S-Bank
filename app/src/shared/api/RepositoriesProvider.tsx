@@ -1,7 +1,9 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
 import { useApiMode } from '@/shared/config/ApiModeProvider';
+import { devApiIdentityFor } from '@/shared/auth/dev-api-identity';
 import { useSessionStore } from '@/shared/auth/SessionProvider';
+import { env } from '@/shared/config/env';
 
 import { createRepositories, type Repositories } from './repositories';
 
@@ -24,6 +26,11 @@ export function RepositoriesProvider({ children, repositories }: RepositoriesPro
         getAcr: () => {
           const state = sessionStore.getState();
           return state.status === 'signedIn' ? state.principal.acr : '1';
+        },
+        baseUrl: env.apiBaseUrl,
+        getIdentity: () => {
+          const state = sessionStore.getState();
+          return state.status === 'signedIn' ? devApiIdentityFor(state.principal) : null;
         },
       }),
     [repositories, mode, sessionStore],

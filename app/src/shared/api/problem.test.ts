@@ -1,7 +1,13 @@
 import { pl } from '@/shared/i18n/pl';
 
 import { NotImplementedYet } from './not-implemented';
-import { ApiProblem, describeProblem, isNotFoundProblem, parseProblem } from './problem';
+import {
+  ApiProblem,
+  HTTP_NO_RESPONSE,
+  describeProblem,
+  isNotFoundProblem,
+  parseProblem,
+} from './problem';
 
 describe('parseProblem', () => {
   it('maps the problem type URI the API sends to a typed problem', () => {
@@ -29,8 +35,19 @@ describe('parseProblem', () => {
     ).toBeUndefined();
   });
 
-  it('does not read a code member that the API never sends', () => {
-    expect(parseProblem({ code: 'step_up_required' }, 403).code).toBeUndefined();
+  it('reads the dev API code member in upper snake case', () => {
+    expect(parseProblem({ code: 'INSUFFICIENT_FUNDS', message: 'x' }, 422).code).toBe(
+      'insufficient_funds',
+    );
+    expect(parseProblem({ code: 'RECIPIENT_NOT_FOUND' }, 404).code).toBe('recipient_not_found');
+  });
+
+  it('ignores a code the app has no message for', () => {
+    expect(parseProblem({ code: 'TRANSFER_NOT_FOUND' }, 404).code).toBeUndefined();
+  });
+
+  it('describes a request that got no response as a connection problem', () => {
+    expect(describeProblem(new ApiProblem({ status: HTTP_NO_RESPONSE }))).toBe(pl.errors.network);
   });
 
   it('never exposes server-provided detail text', () => {

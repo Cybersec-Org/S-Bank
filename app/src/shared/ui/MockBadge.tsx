@@ -1,23 +1,26 @@
 import { View } from 'react-native';
 
-import { useIsMockMode } from '@/shared/config/ApiModeProvider';
+import { useApiMode, useIsMockMode } from '@/shared/config/ApiModeProvider';
 import { pl } from '@/shared/i18n/pl';
 
 import { Text } from './Text';
 import { useTheme } from './ThemeProvider';
 
-/** Rendered only in mock mode, so a live build never shows or implies demonstration data. */
+/** Rendered only in mock and hybrid mode, so a live build never shows or implies demonstration data. */
 export function MockBadge() {
   const theme = useTheme();
   const isMock = useIsMockMode();
+  const hybrid = useApiMode() === 'hybrid';
   if (!isMock) {
     return null;
   }
+  const label = hybrid ? pl.common.devApiBadge : pl.common.mockBadge;
+  const hint = hybrid ? pl.common.devApiBadgeHint : pl.common.mockBadgeHint;
   return (
     <View
       accessible
-      accessibilityLabel={pl.common.mockBadge}
-      accessibilityHint={pl.common.mockBadgeHint}
+      accessibilityLabel={label}
+      accessibilityHint={hint}
       style={{
         alignSelf: 'flex-start',
         backgroundColor: theme.colors.warningBg,
@@ -29,7 +32,7 @@ export function MockBadge() {
       }}
     >
       <Text variant="caption" tone="warning">
-        {pl.common.mockBadge}
+        {label}
       </Text>
     </View>
   );
