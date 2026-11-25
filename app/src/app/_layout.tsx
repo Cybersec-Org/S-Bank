@@ -15,6 +15,7 @@ function RootNavigator() {
   return (
     <Stack screenOptions={{ ...screenOptions, headerShown: false }}>
       <Stack.Screen name="(public)" />
+      <Stack.Screen name="oauth/callback" />
       <Stack.Protected guard={session.hasRole('customer')}>
         <Stack.Screen name="(customer)" />
         <Stack.Screen name="pay/[requestId]" />

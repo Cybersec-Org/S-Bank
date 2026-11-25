@@ -33,7 +33,12 @@ import type { DevApiIdentity } from '@/shared/auth/dev-api-identity';
 import type { AssuranceLevel } from '@/shared/auth/roles';
 import type { ApiMode } from '@/shared/config/env';
 
+<<<<<<< HEAD
 import { createDevApiTransport, type DevApiTransport } from './dev-api-transport';
+=======
+import type { AccessTokenProvider } from './client';
+import { createHttpTransport } from './http';
+>>>>>>> origin/passkeys-and-stepup
 import type { MockOptions } from './mock/mock-runner';
 
 export interface Repositories {
@@ -52,9 +57,14 @@ interface RepositoryContext {
   readonly mode: ApiMode;
   /** Current authentication level; the mock transfer API uses it to emulate the server-side step-up check. */
   readonly getAcr: () => AssuranceLevel;
+<<<<<<< HEAD
   /** Hybrid mode only: where the dev API runs and who the signed-in demo user is. */
   readonly baseUrl?: string;
   readonly getIdentity?: () => DevApiIdentity | null;
+=======
+  /** Current in-memory OIDC access token; used only by live `*.http.ts` repositories. */
+  readonly getAccessToken?: AccessTokenProvider | undefined;
+>>>>>>> origin/passkeys-and-stepup
 }
 
 /** Deterministic in-memory repositories; `options` lets tests remove latency or force errors. */
@@ -76,21 +86,25 @@ export function createMockRepositories(
   };
 }
 
-/** Repositories backed by the API; each throws `NotImplementedYet` until its endpoint exists. */
-export function createHttpRepositories(): Repositories {
+/** Repositories backed by the NestJS API. */
+export function createHttpRepositories(
+  getAccessToken: AccessTokenProvider = () => undefined,
+): Repositories {
+  const transport = createHttpTransport(getAccessToken);
   return {
-    accounts: createHttpAccountsRepository(),
-    admin: createHttpAdminRepository(),
+    accounts: createHttpAccountsRepository(transport),
+    admin: createHttpAdminRepository(transport),
     atms: createHttpAtmsRepository(),
-    employee: createHttpEmployeeRepository(),
-    payments: createHttpPaymentsRepository(),
-    rates: createHttpRatesRepository(),
-    recipients: createHttpRecipientsRepository(),
-    settings: createHttpSettingsRepository(),
-    transfers: createHttpTransfersRepository(),
+    employee: createHttpEmployeeRepository(transport),
+    payments: createHttpPaymentsRepository(transport),
+    rates: createHttpRatesRepository(transport),
+    recipients: createHttpRecipientsRepository(transport),
+    settings: createHttpSettingsRepository(transport),
+    transfers: createHttpTransfersRepository(transport),
   };
 }
 
+<<<<<<< HEAD
 /**
  * Development only: accounts, history, transfers, rates and the employee panel use the dev API; features
  * the API does not have yet (payments, recipients, settings, ATMs, admin) stay on demo data.
@@ -127,4 +141,11 @@ export function createRepositories({
     case 'live':
       return createHttpRepositories();
   }
+=======
+/** The only place that decides between mock and live data. */
+export function createRepositories({ mode, getAcr, getAccessToken }: RepositoryContext): Repositories {
+  return mode === 'mock'
+    ? createMockRepositories(getAcr)
+    : createHttpRepositories(getAccessToken);
+>>>>>>> origin/passkeys-and-stepup
 }

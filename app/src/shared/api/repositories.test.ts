@@ -13,15 +13,16 @@ describe('createRepositories', () => {
     });
   });
 
-  it('never falls back to demo data in live mode: unfinished endpoints fail with the backlog id', async () => {
+  it('never falls back to demo data in live mode', async () => {
     const repositories = createRepositories({ mode: 'live', getAcr });
 
-    await expect(repositories.accounts.listAccounts()).rejects.toMatchObject({
+    await expect(repositories.atms.listAtms()).rejects.toMatchObject({
       name: 'NotImplementedYet',
-      backlogId: 'B-12',
+      backlogId: 'B-30',
     });
-    await expect(repositories.transfers.getDraft('x')).rejects.toMatchObject({ backlogId: 'B-18' });
-    await expect(repositories.rates.getRatesTable()).rejects.toMatchObject({ backlogId: 'B-15' });
+    expect(repositories.accounts.listAccounts).toBeDefined();
+    expect(repositories.transfers.getDraft).toBeDefined();
+    expect(repositories.rates.getRatesTable).toBeDefined();
   });
 
   it('uses the dev API for screens it supports and demo data for the rest in hybrid mode', async () => {

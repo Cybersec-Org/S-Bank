@@ -20,6 +20,7 @@ export const HTTP_BAD_GATEWAY = 502;
 /** Problems the app has a specific Polish message for. */
 export const PROBLEM_CODES = [
   'step_up_required',
+  'passkey_required',
   'insufficient_funds',
   'daily_limit_exceeded',
   'invalid_iban',
@@ -39,7 +40,21 @@ const problemBodySchema = z.object({
   title: z.string().optional(),
   status: z.number().int().optional(),
   code: z.string().optional(),
+<<<<<<< HEAD
+=======
+  statusCode: z.number().int().optional(),
+>>>>>>> origin/passkeys-and-stepup
 });
+
+const NEST_CODE_MAP: Readonly<Record<string, ProblemCode>> = {
+  STEP_UP_REQUIRED: 'step_up_required',
+  PASSKEY_REQUIRED: 'passkey_required',
+  INSUFFICIENT_FUNDS: 'insufficient_funds',
+  DAILY_LIMIT_EXCEEDED: 'daily_limit_exceeded',
+  INVALID_IBAN: 'invalid_iban',
+  REQUEST_EXPIRED: 'request_expired',
+  ACCOUNT_BLOCKED: 'account_blocked',
+};
 
 const PROBLEM_TYPE_PREFIX = '/problems/';
 
@@ -83,9 +98,17 @@ export function parseProblem(body: unknown, httpStatus: number): ApiProblem {
   if (!parsed.success) {
     return new ApiProblem({ status: httpStatus });
   }
+  const code =
+    codeFromType(parsed.data.type) ??
+    (parsed.data.code === undefined ? undefined : NEST_CODE_MAP[parsed.data.code]);
   return new ApiProblem({
+<<<<<<< HEAD
     status: httpStatus,
     code: codeFromType(parsed.data.type) ?? toKnownCode(parsed.data.code?.toLowerCase()),
+=======
+    status: parsed.data.statusCode ?? httpStatus,
+    code,
+>>>>>>> origin/passkeys-and-stepup
     title: parsed.data.title,
     type: parsed.data.type,
   });
@@ -97,6 +120,7 @@ export function isApiProblem(error: unknown): error is ApiProblem {
 
 const CODE_MESSAGES: Readonly<Record<ProblemCode, string>> = {
   step_up_required: pl.errors.stepUpRequired,
+  passkey_required: pl.errors.passkeyRequired,
   insufficient_funds: pl.errors.insufficientFunds,
   daily_limit_exceeded: pl.errors.dailyLimitExceeded,
   invalid_iban: pl.errors.invalidIban,

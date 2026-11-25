@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 
 import { describeProblem } from '@/shared/api/problem';
 import { useSession } from '@/shared/auth/SessionProvider';
+import { useIsMockMode } from '@/shared/config/ApiModeProvider';
 import { pl } from '@/shared/i18n/pl';
 import { formatDate } from '@/shared/lib/dates';
 import { AsyncBoundary, Banner, Box, Button, ListItem, Screen, Text, Toggle } from '@/shared/ui';
@@ -14,20 +16,37 @@ import {
   useSetBiometricsMutation,
 } from '../hooks/useSettings';
 
-/** FR-14: biometrics toggle, passkey list (both mocked until B-20 / B-21) and sign-out. */
+/** FR-14 / SR-03: biometrics toggle, passkey list with add/remove via Keycloak & API (live) or mock. */
 export function SettingsScreen() {
   const router = useRouter();
   const session = useSession();
+  const isMock = useIsMockMode();
   const securityQuery = useSecuritySettingsQuery();
   const biometrics = useSetBiometricsMutation();
   const passkeysQuery = usePasskeysQuery();
   const addPasskey = useAddPasskeyMutation();
   const removePasskey = useRemovePasskeyMutation();
   const passkeys = passkeysQuery.data ?? [];
+  const [livePasskeyNotice, setLivePasskeyNotice] = useState<string | null>(null);
+  const [registeringLive, setRegisteringLive] = useState(false);
 
   function handleSignOut(): void {
     session.signOut();
     router.replace('/');
+  }
+
+  async function handleRegisterLivePasskey(): Promise<void> {
+    setLivePasskeyNotice(null);
+    setRegisteringLive(true);
+    try {
+      await session.registerPasskey();
+      await passkeysQuery.refetch();
+      setLivePasskeyNotice(pl.settings.passkeyAddedNotice);
+    } catch {
+      setLivePasskeyNotice(pl.start.loginCancelled);
+    } finally {
+      setRegisteringLive(false);
+    }
   }
 
   const mutationError = biometrics.error ?? addPasskey.error ?? removePasskey.error;
@@ -40,6 +59,7 @@ export function SettingsScreen() {
       {mutationError === null ? null : (
         <Banner tone="danger">{describeProblem(mutationError)}</Banner>
       )}
+      {livePasskeyNotice === null ? null : <Banner tone="info">{livePasskeyNotice}</Banner>}
 
       <Box gap="sm">
         <Text variant="heading">{pl.settings.securityHeading}</Text>
@@ -89,12 +109,21 @@ export function SettingsScreen() {
             ))}
           </Box>
         </AsyncBoundary>
-        <Button
-          label={pl.settings.passkeyAdd}
-          variant="secondary"
-          loading={addPasskey.isPending}
-          onPress={() => addPasskey.mutate()}
-        />
+        {isMock ? (
+          <Button
+            label={pl.settings.passkeyAdd}
+            variant="secondary"
+            loading={addPasskey.isPending}
+            onPress={() => addPasskey.mutate()}
+          />
+        ) : (
+          <Button
+            label={pl.settings.passkeyAddLive}
+            variant="secondary"
+            loading={registeringLive}
+            onPress={() => void handleRegisterLivePasskey()}
+          />
+        )}
       </Box>
 
       <Box gap="sm">

@@ -9,6 +9,7 @@ export interface Principal {
   readonly displayName: string;
   readonly roles: readonly Role[];
   readonly acr: AssuranceLevel;
+  readonly authTime?: number | undefined;
 }
 
 /** UI convenience only; the API enforces roles from the verified token. */

@@ -3,34 +3,53 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { writeFileSync } from 'node:fs';
+import helmet from 'helmet';
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+    }),
+  );
+
   app.enableCors();
 
   const config = new DocumentBuilder()
     .setTitle('S-Bank API')
-    .setVersion('0.2.0')
+    .setVersion('0.3.0')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  
+
   writeFileSync('./openapi.json', JSON.stringify(document, null, 2));
 
   SwaggerModule.setup('docs', app, document);
 
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   const port = Number(process.env['PORT'] ?? 3000);
+<<<<<<< HEAD
   // Loopback by default: identity still comes from mock headers. Set HOST=0.0.0.0 to reach the API from a phone on the LAN.
   const host = process.env['HOST'] ?? '127.0.0.1';
   await app.listen(port, host);
   console.log(`Api: http://${host}:${port}`);
   console.log(`Swagger: http://localhost:${port}/docs`);
+=======
+  await app.listen(port, '0.0.0.0');
+  console.log(`API running on: http://localhost:${port}`);
+  console.log(`Swagger documentation: http://localhost:${port}/docs`);
+  console.log(`Generated openapi.json file successfully!`);
+>>>>>>> origin/passkeys-and-stepup
 }
 
 bootstrap();

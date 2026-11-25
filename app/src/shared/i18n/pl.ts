@@ -39,6 +39,7 @@ export const pl = {
     tooManyRequests: 'Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.',
     server: 'Usługa banku jest chwilowo niedostępna. Spróbuj ponownie później.',
     stepUpRequired: 'Ta operacja wymaga dodatkowego potwierdzenia kluczem dostępu.',
+    passkeyRequired: 'Konto pracownika i administratora musi mieć przynajmniej jeden klucz dostępu.',
     insufficientFunds: 'Na rachunku brakuje środków na tę operację.',
     dailyLimitExceeded: 'Ta operacja przekroczyłaby dzienny limit.',
     invalidIban: 'Numer rachunku jest niepoprawny.',
@@ -91,7 +92,12 @@ export const pl = {
     loginPassword: 'Zaloguj się hasłem',
     loginInfo:
       'Logowanie otworzy stronę banku w przeglądarce systemowej. Aplikacja nigdy nie widzi Twojego hasła.',
-    loginLiveUnavailable: 'Logowanie przez przeglądarkę systemową zostanie dodane w zadaniu B-10.',
+    loginLiveUnavailable: 'Logowanie przez przeglądarkę systemową zostało anulowane lub nie powiodło się.',
+    loginCancelled: 'Logowanie zostało anulowane.',
+    loginAccessDenied:
+      'Odmowa dostępu. Pracownik i administrator muszą zalogować się kluczem dostępu (Passkey).',
+    loginFailed: 'Nie udało się zalogować przez serwer tożsamości. Spróbuj ponownie.',
+    registerPasskey: 'Zarejestruj klucz dostępu (Passkey)',
     sessionDivider: 'masz już sesję na tym urządzeniu?',
     unlockBiometrics: 'Odblokuj biometrią',
     unlockBiometricsSoon: 'Odblokowanie biometrią będzie dostępne w jednym z kolejnych etapów.',
@@ -253,7 +259,9 @@ export const pl = {
     stepUpBody:
       'Ten przelew wymaga klucza dostępu. Użyj odcisku palca lub rozpoznawania twarzy na tym urządzeniu.',
     stepUpUnavailable:
-      'Potwierdzenie kluczem dostępu zostanie dodane po podłączeniu logowania (zadanie B-10).',
+      'Potwierdzenie kluczem dostępu zostało anulowane lub nie powiodło się. Spróbuj ponownie.',
+    stepUpCancelled: 'Potwierdzenie kluczem dostępu zostało anulowane.',
+    stepUpFailed: 'Nie udało się potwierdzić operacji kluczem dostępu. Upewnij się, że masz zarejestrowany Passkey.',
     signedNote: 'Po wykonaniu dostaniesz potwierdzenie podpisane przez bank.',
     confirmWithPasskey: 'Potwierdź kluczem dostępu',
     confirm: 'Potwierdź przelew',
@@ -339,6 +347,8 @@ export const pl = {
     passkeysHeading: 'Klucze dostępu',
     passkeysIntro: 'Klucze dostępu zastępują hasło i potwierdzają większe przelewy.',
     passkeyAdd: 'Dodaj klucz dostępu (MOCK)',
+    passkeyAddLive: 'Dodaj klucz dostępu (Passkey)',
+    passkeyAddedNotice: 'Klucz dostępu został zarejestrowany w Keycloak.',
     passkeyRemoveLabel: (label: string): string => `Usuń klucz dostępu ${label}`,
     passkeyRemove: 'Usuń',
     passkeyAddedOn: (date: string): string => `Dodany: ${date}`,

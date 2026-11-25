@@ -5,9 +5,11 @@ export enum PartnerId {
 
 export type PartnerPermission =
   | 'payments:read'
+  | 'payments:create'
   | 'reports:read';
 
 export interface AuthenticatedPartner {
   id: PartnerId;
   permissions: PartnerPermission[];
+  expectedCertThumbprint?: string | undefined;
 }

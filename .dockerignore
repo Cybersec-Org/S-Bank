@@ -27,3 +27,10 @@ docs
 !README.md
 *.log
 *.sarif
+certs/
+Caddy/certs/
+**/core.*
+*.db
+*.bak
+*-diagnostics.txt
+diagnose-*

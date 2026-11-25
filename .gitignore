@@ -60,3 +60,4 @@ Thumbs.db
 .claude/settings.local.json
 .claude/agent-memory-local/
 CLAUDE.local.md
+package-lock.json
