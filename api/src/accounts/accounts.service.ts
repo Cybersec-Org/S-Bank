@@ -21,6 +21,8 @@ import {
 } from './dto/extra.dto.js';
 import { SignatureService } from '../auth/signature.service.js';
 
+const STEP_UP_MAX_AGE_SECONDS = 300;
+
 @Injectable()
 export class AccountsService {
   private readonly logger = new Logger(AccountsService.name);
@@ -238,18 +240,6 @@ export class AccountsService {
     }
 
     const config = await this.getSystemConfig();
-    if (Number(dto.amount) >= config.stepUpThreshold && user.acr !== '2') {
-      await this.logSecurityIncident(
-        user,
-        'STEP_UP_REQUIRED',
-        senderAccount.id,
-        `Transfer of ${dto.amount} PLN requires Passkey step-up authentication (acr=2, threshold=${config.stepUpThreshold})`,
-      );
-      throw new ForbiddenException({
-        code: 'STEP_UP_REQUIRED',
-        message: `Transfers of ${config.stepUpThreshold} PLN or more require Passkey step-up confirmation (acr=2).`,
-      });
-    }
 
     const ability = this.caslAbilityFactory.createForUser(user);
     const subject = CaslAbilityFactory.toAccountSubject(senderAccount);
@@ -321,6 +311,36 @@ export class AccountsService {
       amount: Number(draft.amount),
       currency: draft.currency,
       title: draft.title,
+      requiresStepUp: Number(draft.amount) >= config.stepUpThreshold,
+      createdAt: draft.createdAt,
+    };
+  }
+
+  async getTransferDraft(transferId: string, user: AuthenticatedUser) {
+    const draft = await this.prisma.transaction.findUnique({
+      where: { id: transferId },
+      include: { senderAccount: true },
+    });
+
+    if (!draft || draft.status !== 'DRAFT' || draft.senderAccount.ownerId !== user.id) {
+      throw new NotFoundException({
+        code: 'TRANSFER_NOT_FOUND',
+        message: 'Transfer draft not found or already processed',
+      });
+    }
+
+    const config = await this.getSystemConfig();
+    return {
+      id: draft.id,
+      status: draft.status,
+      senderAccountId: draft.senderAccountId,
+      senderIban: draft.senderAccount.iban,
+      receiverIban: draft.receiverIban,
+      receiverName: draft.receiverName,
+      amount: Number(draft.amount),
+      currency: draft.currency,
+      title: draft.title,
+      requiresStepUp: Number(draft.amount) >= config.stepUpThreshold,
       createdAt: draft.createdAt,
     };
   }
@@ -361,16 +381,19 @@ async confirmTransfer(transferId: string, user: AuthenticatedUser) {
   }
 
   const config = await this.getSystemConfig();
+  const isStepUpFresh =
+    user.authTime === undefined ||
+    Math.floor(Date.now() / 1000) - user.authTime <= STEP_UP_MAX_AGE_SECONDS;
 
   if (
     Number(initialDraft.amount) >= config.stepUpThreshold &&
-    user.acr !== '2'
+    (user.acr !== '2' || !isStepUpFresh)
   ) {
     await this.logSecurityIncident(
       user,
       'STEP_UP_REQUIRED',
       initialDraft.senderAccount.id,
-      `Transfer of ${initialDraft.amount} PLN requires Passkey step-up authentication (acr=2)`,
+      `Transfer of ${initialDraft.amount} PLN requires fresh Passkey step-up authentication (acr=2)`,
     );
 
     throw new ForbiddenException({

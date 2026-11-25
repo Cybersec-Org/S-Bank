@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { jest } from '@jest/globals';
 import { Role } from './interfaces/authenticated-user.interface.js';
@@ -165,10 +165,11 @@ describe('JwtAuthGuard', () => {
     });
   });
 
-   it('copies acr=2 from the validated token to the authenticated user', async () => {
+   it('copies acr=2 and auth_time from the validated token to the authenticated user', async () => {
     (jwtVerify as jest.Mock).mockResolvedValue({
       payload: mockPayload({
         acr: '2',
+        auth_time: 1700000000,
         realm_access: { roles: [Role.EMPLOYEE] },
       }),
     });
@@ -177,26 +178,30 @@ describe('JwtAuthGuard', () => {
     await expect(guard.canActivate(ctx.executionContext)).resolves.toBe(true);
 
     expect(ctx.request.user.acr).toBe('2');
+    expect(ctx.request.user.authTime).toBe(1700000000);
   });
 
-  it('preserves acr=1 from the validated token', async () => {
+  it('preserves acr=1 from the validated token for CLIENT', async () => {
+    prisma.customer.findUnique.mockResolvedValue({ id: 'customer-123' });
     (jwtVerify as jest.Mock).mockResolvedValue({
       payload: mockPayload({
         acr: '1',
-        realm_access: { roles: [Role.EMPLOYEE] },
+        realm_access: { roles: ['customer'] },
       }),
     });
 
     const ctx = createContext();
     await expect(guard.canActivate(ctx.executionContext)).resolves.toBe(true);
 
+    expect(ctx.request.user.role).toBe(Role.CLIENT);
     expect(ctx.request.user.acr).toBe('1');
   });
 
-  it('leaves acr undefined when the token does not contain the claim', async () => {
+  it('leaves acr undefined when the token does not contain the claim for CLIENT', async () => {
+    prisma.customer.findUnique.mockResolvedValue({ id: 'customer-123' });
     (jwtVerify as jest.Mock).mockResolvedValue({
       payload: mockPayload({
-        realm_access: { roles: [Role.EMPLOYEE] },
+        realm_access: { roles: [Role.CLIENT] },
       }),
     });
 
@@ -206,11 +211,27 @@ describe('JwtAuthGuard', () => {
     expect(ctx.request.user.acr).toBeUndefined();
   });
 
-  it.each([Role.EMPLOYEE, Role.ADMIN])(
-    'preserves the Keycloak subject for %s',
+  it.each([Role.EMPLOYEE, Role.ADMIN, 'employee', 'admin'])(
+    'rejects %s when acr is not 2 (Passkey required)',
     async (role) => {
       (jwtVerify as jest.Mock).mockResolvedValue({
         payload: mockPayload({
+          acr: '1',
+          realm_access: { roles: [role] },
+        }),
+      });
+
+      await expect(guard.canActivate(createContext().executionContext))
+        .rejects.toThrow(ForbiddenException);
+    },
+  );
+
+  it.each([Role.EMPLOYEE, Role.ADMIN])(
+    'preserves the Keycloak subject for %s when acr=2',
+    async (role) => {
+      (jwtVerify as jest.Mock).mockResolvedValue({
+        payload: mockPayload({
+          acr: '2',
           realm_access: { roles: [role] },
         }),
       });
@@ -221,6 +242,7 @@ describe('JwtAuthGuard', () => {
       expect(ctx.request.user).toEqual({
         id: 'keycloak-user-1',
         role,
+        acr: '2',
         ipAddress: '127.0.0.1',
       });
 

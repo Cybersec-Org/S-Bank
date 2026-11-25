@@ -9,6 +9,7 @@ export interface AuthenticatedUser {
   role: Role;
   ipAddress: string;
   acr?: string | undefined;
+  authTime?: number | undefined;
   email?: string | undefined;
   firstName?: string | undefined;
   lastName?: string | undefined;

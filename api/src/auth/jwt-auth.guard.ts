@@ -1,4 +1,6 @@
+import { randomInt } from 'node:crypto';
 import {
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
   type CanActivate,
@@ -13,10 +15,24 @@ interface KeycloakPayload extends JWTPayload {
   azp?: string;
   typ?: string;
   acr?: string;
+  auth_time?: number;
+  email?: string;
+  given_name?: string;
+  family_name?: string;
+  preferred_username?: string;
   realm_access?: {
     roles?: string[];
   };
 }
+
+const ROLE_ALIASES: Readonly<Record<string, Role>> = {
+  CLIENT: Role.CLIENT,
+  customer: Role.CLIENT,
+  EMPLOYEE: Role.EMPLOYEE,
+  employee: Role.EMPLOYEE,
+  ADMIN: Role.ADMIN,
+  admin: Role.ADMIN,
+};
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -84,24 +100,40 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Token has no subject');
     }
 
-    const allowedRoles = Object.values(Role);
-    const roles = (payload.realm_access?.roles ?? [])
-      .filter((role): role is Role => allowedRoles.includes(role as Role));
+    const mappedRoles = Array.from(
+      new Set(
+        (payload.realm_access?.roles ?? [])
+          .map((rawRole) => ROLE_ALIASES[rawRole])
+          .filter((mapped): mapped is Role => mapped !== undefined),
+      ),
+    );
 
-    const role = roles[0];
+    const role = mappedRoles[0];
 
-    if (roles.length !== 1 || !role) {
+    if (mappedRoles.length !== 1 || !role) {
       throw new UnauthorizedException(
         'Token must contain exactly one supported application role',
       );
-    } 
+    }
+
+    if ((role === Role.EMPLOYEE || role === Role.ADMIN) && payload.acr !== '2') {
+      throw new ForbiddenException({
+        code: 'PASSKEY_REQUIRED',
+        message: 'Employee and admin accounts require Passkey authentication (acr=2).',
+      });
+    }
+
     let userId = payload.sub;
 
     if (role === Role.CLIENT) {
-      const customer = await this.prisma.customer.findUnique({
+      let customer = await this.prisma.customer.findUnique({
         where: { keycloakSub: payload.sub },
         select: { id: true },
       });
+
+      if (!customer && typeof payload.email === 'string' && payload.email.trim() !== '') {
+        customer = await this.provisionOrLinkCustomer(payload);
+      }
 
       if (!customer) {
         throw new UnauthorizedException('Keycloak user is not linked to a customer account');
@@ -115,9 +147,56 @@ export class JwtAuthGuard implements CanActivate {
       role,
       ipAddress: request.ip || '127.0.0.1',
       acr: payload.acr,
+      ...(typeof payload.auth_time === 'number' ? { authTime: payload.auth_time } : {}),
+      ...(typeof payload.email === 'string' ? { email: payload.email } : {}),
+      ...(typeof payload.given_name === 'string' ? { firstName: payload.given_name } : {}),
+      ...(typeof payload.family_name === 'string' ? { lastName: payload.family_name } : {}),
     };
-    
+
     request.user = user;
     return true;
+  }
+
+  private async provisionOrLinkCustomer(payload: KeycloakPayload): Promise<{ id: string }> {
+    const email = payload.email!.trim().toLowerCase();
+    const existingByEmail = await this.prisma.customer.findUnique({
+      where: { email },
+      select: { id: true, keycloakSub: true },
+    });
+
+    if (existingByEmail) {
+      if (!existingByEmail.keycloakSub) {
+        return this.prisma.customer.update({
+          where: { id: existingByEmail.id },
+          data: { keycloakSub: payload.sub! },
+          select: { id: true },
+        });
+      }
+      return { id: existingByEmail.id };
+    }
+
+    const randomDigits = `${randomInt(10000000, 99999999)}${randomInt(10000000, 99999999)}${randomInt(10000000, 99999999)}`;
+    const demoIban = `PL${randomInt(10, 99)}${randomDigits}`;
+
+    return this.prisma.customer.create({
+      data: {
+        id: payload.sub!,
+        keycloakSub: payload.sub!,
+        firstName: payload.given_name?.trim() || 'Nowy',
+        lastName: payload.family_name?.trim() || 'Klient',
+        email,
+        customerNumber: `CUST-${randomInt(10000, 99999)}`,
+        accounts: {
+          create: {
+            iban: demoIban,
+            currency: 'PLN',
+            balance: 5000.0,
+            dailyLimit: 10000.0,
+            status: 'ACTIVE',
+          },
+        },
+      },
+      select: { id: true },
+    });
   }
 }

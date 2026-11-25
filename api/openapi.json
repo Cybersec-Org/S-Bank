@@ -148,40 +148,17 @@
     "/accounts": {
       "get": {
         "operationId": "AccountsController_findAll",
-        "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get list of accounts (includes dailyUsed and auto-provisions OIDC demo account)",
         "tags": [
           "Banking API"
@@ -191,40 +168,17 @@
     "/accounts/audit-logs": {
       "get": {
         "operationId": "AccountsController_getAuditLogs",
-        "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get security audit logs (Admin only)",
         "tags": [
           "Banking API"
@@ -234,40 +188,17 @@
     "/admin/config": {
       "get": {
         "operationId": "AccountsController_getSystemConfig",
-        "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get global security parameters (Admin only)",
         "tags": [
           "Banking API"
@@ -275,35 +206,7 @@
       },
       "patch": {
         "operationId": "AccountsController_updateSystemConfig",
-        "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -319,6 +222,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Update global step-up threshold and daily limit range (Admin only)",
         "tags": [
           "Banking API"
@@ -330,33 +238,6 @@
         "operationId": "AccountsController_findOne",
         "parameters": [
           {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "id",
             "required": true,
             "in": "path",
@@ -370,6 +251,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get account details with BOLA protection",
         "tags": [
           "Banking API"
@@ -381,33 +267,6 @@
         "operationId": "AccountsController_getTransactions",
         "parameters": [
           {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "id",
             "required": true,
             "in": "path",
@@ -421,6 +280,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get account transaction history",
         "tags": [
           "Banking API"
@@ -431,33 +295,6 @@
       "patch": {
         "operationId": "AccountsController_updateLimit",
         "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
           {
             "name": "id",
             "required": true,
@@ -482,6 +319,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Update account daily limit (Employee or Admin only)",
         "tags": [
           "Banking API"
@@ -492,33 +334,6 @@
       "patch": {
         "operationId": "AccountsController_updateStatus",
         "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
           {
             "name": "id",
             "required": true,
@@ -543,6 +358,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Freeze or unfreeze account (Employee/Admin only)",
         "tags": [
           "Banking API"
@@ -552,35 +372,7 @@
     "/transfers": {
       "post": {
         "operationId": "AccountsController_createTransferDraft",
-        "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -596,43 +388,21 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Step 1: Create transfer draft and return summary",
         "tags": [
           "Banking API"
         ]
       }
     },
-    "/transfers/{id}/confirm": {
-      "post": {
-        "operationId": "AccountsController_confirmTransfer",
+    "/transfers/{id}": {
+      "get": {
+        "operationId": "AccountsController_getTransferDraft",
         "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
           {
             "name": "id",
             "required": true,
@@ -647,6 +417,40 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get transfer draft details with BOLA protection",
+        "tags": [
+          "Banking API"
+        ]
+      }
+    },
+    "/transfers/{id}/confirm": {
+      "post": {
+        "operationId": "AccountsController_confirmTransfer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Step 2: Confirm, execute and sign transfer",
         "tags": [
           "Banking API"
@@ -658,33 +462,6 @@
         "operationId": "AccountsController_cancelTransfer",
         "parameters": [
           {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "id",
             "required": true,
             "in": "path",
@@ -698,6 +475,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Step 2 (Alternative): Cancel transfer draft",
         "tags": [
           "Banking API"
@@ -707,40 +489,17 @@
     "/recipients": {
       "get": {
         "operationId": "AccountsController_getRecipients",
-        "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get logged-in client saved recipients",
         "tags": [
           "Banking API"
@@ -748,35 +507,7 @@
       },
       "post": {
         "operationId": "AccountsController_createRecipient",
-        "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -792,6 +523,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Add a new saved recipient",
         "tags": [
           "Banking API"
@@ -803,33 +539,6 @@
         "operationId": "AccountsController_deleteRecipient",
         "parameters": [
           {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "id",
             "required": true,
             "in": "path",
@@ -843,6 +552,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Delete saved recipient (BOLA 404 protected)",
         "tags": [
           "Banking API"
@@ -854,33 +568,6 @@
         "operationId": "AccountsController_getPaymentRequest",
         "parameters": [
           {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "id",
             "required": true,
             "in": "path",
@@ -894,6 +581,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get payment request details for QR code or deep link sbank://pay/{id}",
         "tags": [
           "Banking API"
@@ -905,33 +597,6 @@
         "operationId": "AccountsController_payPaymentRequest",
         "parameters": [
           {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
             "name": "id",
             "required": true,
             "in": "path",
@@ -945,6 +610,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Confirm and pay a QR / deep link payment request",
         "tags": [
           "Banking API"
@@ -954,40 +624,17 @@
     "/customers/me": {
       "get": {
         "operationId": "AccountsController_getMyProfile",
-        "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get logged-in customer profile (for client dashboard)",
         "tags": [
           "Banking API"
@@ -998,33 +645,6 @@
       "get": {
         "operationId": "AccountsController_searchCustomers",
         "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
           {
             "name": "query",
             "required": false,
@@ -1040,6 +660,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Search customers for employees (GET /customers?query=)",
         "tags": [
           "Banking API"
@@ -1050,33 +675,6 @@
       "get": {
         "operationId": "AccountsController_getCustomer",
         "parameters": [
-          {
-            "name": "x-user-acr",
-            "in": "header",
-            "description": "Auth level: 1 (standard) or 2 (Passkey step-up for >= 1000 PLN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-role",
-            "in": "header",
-            "description": "User role (CLIENT, EMPLOYEE, ADMIN)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "description": "User ID (e.g. client-1, emp-1, admin-1)",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
           {
             "name": "id",
             "required": true,
@@ -1091,6 +689,11 @@
             "description": ""
           }
         },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Get customer details along with accounts and history",
         "tags": [
           "Banking API"
@@ -1125,7 +728,7 @@
             "description": ""
           }
         },
-        "summary": "Test endpoint for partner1 payments:read permission",
+        "summary": "Test endpoint for partner payments:read permission",
         "tags": [
           "Partner mTLS API"
         ]
@@ -1159,7 +762,7 @@
             "description": ""
           }
         },
-        "summary": "Test endpoint for partner2 reports:read permission",
+        "summary": "Test endpoint for partner reports:read permission",
         "tags": [
           "Partner mTLS API"
         ]

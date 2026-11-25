@@ -93,6 +93,13 @@ export class AccountsController {
     return this.accountsService.createTransferDraft(dto, req.user);
   }
 
+  @Get('transfers/:id')
+  @CheckAbilities({ action: Action.Read, subject: 'Account' })
+  @ApiOperation({ summary: 'Get transfer draft details with BOLA protection' })
+  async getTransferDraft(@Param('id') id: string, @Req() req: any) {
+    return this.accountsService.getTransferDraft(id, req.user);
+  }
+
   @Post('transfers/:id/confirm')
   @HttpCode(200)
   @CheckAbilities({ action: Action.Transfer, subject: 'Account' })
