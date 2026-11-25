@@ -160,6 +160,7 @@ describe('JwtAuthGuard', () => {
 
     expect(ctx.request.user).toEqual({
       id: 'customer-123',
+      keycloakSub: 'keycloak-user-1',
       role: Role.CLIENT,
       ipAddress: '127.0.0.1',
     });
@@ -241,6 +242,7 @@ describe('JwtAuthGuard', () => {
 
       expect(ctx.request.user).toEqual({
         id: 'keycloak-user-1',
+        keycloakSub: 'keycloak-user-1',
         role,
         acr: '2',
         ipAddress: '127.0.0.1',

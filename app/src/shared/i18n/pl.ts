@@ -36,6 +36,7 @@ export const pl = {
     tooManyRequests: 'Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.',
     server: 'Usługa banku jest chwilowo niedostępna. Spróbuj ponownie później.',
     stepUpRequired: 'Ta operacja wymaga dodatkowego potwierdzenia kluczem dostępu.',
+    passkeyRequired: 'Konto pracownika i administratora musi mieć przynajmniej jeden klucz dostępu.',
     insufficientFunds: 'Na rachunku brakuje środków na tę operację.',
     dailyLimitExceeded: 'Ta operacja przekroczyłaby dzienny limit.',
     invalidIban: 'Numer rachunku jest niepoprawny.',

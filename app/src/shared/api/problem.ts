@@ -16,6 +16,7 @@ const HTTP_SERVER_ERROR_MIN = 500;
 /** Problems the app has a specific Polish message for. */
 export const PROBLEM_CODES = [
   'step_up_required',
+  'passkey_required',
   'insufficient_funds',
   'daily_limit_exceeded',
   'invalid_iban',
@@ -35,6 +36,7 @@ const problemBodySchema = z.object({
 
 const NEST_CODE_MAP: Readonly<Record<string, ProblemCode>> = {
   STEP_UP_REQUIRED: 'step_up_required',
+  PASSKEY_REQUIRED: 'passkey_required',
   INSUFFICIENT_FUNDS: 'insufficient_funds',
   DAILY_LIMIT_EXCEEDED: 'daily_limit_exceeded',
   INVALID_IBAN: 'invalid_iban',
@@ -101,6 +103,7 @@ export function isApiProblem(error: unknown): error is ApiProblem {
 
 const CODE_MESSAGES: Readonly<Record<ProblemCode, string>> = {
   step_up_required: pl.errors.stepUpRequired,
+  passkey_required: pl.errors.passkeyRequired,
   insufficient_funds: pl.errors.insufficientFunds,
   daily_limit_exceeded: pl.errors.dailyLimitExceeded,
   invalid_iban: pl.errors.invalidIban,

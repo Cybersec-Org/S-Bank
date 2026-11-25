@@ -16,7 +16,7 @@ import {
   useSetBiometricsMutation,
 } from '../hooks/useSettings';
 
-/** FR-14: biometrics toggle, passkey registration via Keycloak (live) or demo list (mock), and sign-out. */
+/** FR-14 / SR-03: biometrics toggle, passkey list with add/remove via Keycloak & API (live) or mock. */
 export function SettingsScreen() {
   const router = useRouter();
   const session = useSession();
@@ -40,6 +40,7 @@ export function SettingsScreen() {
     setRegisteringLive(true);
     try {
       await session.registerPasskey();
+      await passkeysQuery.refetch();
       setLivePasskeyNotice(pl.settings.passkeyAddedNotice);
     } catch {
       setLivePasskeyNotice(pl.start.loginCancelled);
@@ -81,42 +82,40 @@ export function SettingsScreen() {
       <Box gap="sm">
         <Text variant="heading">{pl.settings.passkeysHeading}</Text>
         <Text tone="muted">{pl.settings.passkeysIntro}</Text>
-        {isMock ? (
-          <>
-            <AsyncBoundary
-              isLoading={passkeysQuery.isPending}
-              error={passkeysQuery.error}
-              isEmpty={passkeys.length === 0}
-              onRetry={() => void passkeysQuery.refetch()}
-              emptyTitle={pl.settings.passkeysEmptyTitle}
-              emptyMessage={pl.settings.passkeysEmptyMessage}
-            >
-              <Box>
-                {passkeys.map((passkey) => (
-                  <ListItem
-                    key={passkey.id}
-                    title={passkey.label}
-                    subtitle={pl.settings.passkeyAddedOn(formatDate(passkey.createdAt))}
-                    trailing={
-                      <Button
-                        label={pl.settings.passkeyRemove}
-                        variant="destructive"
-                        accessibilityLabel={pl.settings.passkeyRemoveLabel(passkey.label)}
-                        loading={removePasskey.isPending && removePasskey.variables === passkey.id}
-                        onPress={() => removePasskey.mutate(passkey.id)}
-                      />
-                    }
+        <AsyncBoundary
+          isLoading={passkeysQuery.isPending}
+          error={passkeysQuery.error}
+          isEmpty={passkeys.length === 0}
+          onRetry={() => void passkeysQuery.refetch()}
+          emptyTitle={pl.settings.passkeysEmptyTitle}
+          emptyMessage={pl.settings.passkeysEmptyMessage}
+        >
+          <Box>
+            {passkeys.map((passkey) => (
+              <ListItem
+                key={passkey.id}
+                title={passkey.label}
+                subtitle={pl.settings.passkeyAddedOn(formatDate(passkey.createdAt))}
+                trailing={
+                  <Button
+                    label={pl.settings.passkeyRemove}
+                    variant="destructive"
+                    accessibilityLabel={pl.settings.passkeyRemoveLabel(passkey.label)}
+                    loading={removePasskey.isPending && removePasskey.variables === passkey.id}
+                    onPress={() => removePasskey.mutate(passkey.id)}
                   />
-                ))}
-              </Box>
-            </AsyncBoundary>
-            <Button
-              label={pl.settings.passkeyAdd}
-              variant="secondary"
-              loading={addPasskey.isPending}
-              onPress={() => addPasskey.mutate()}
-            />
-          </>
+                }
+              />
+            ))}
+          </Box>
+        </AsyncBoundary>
+        {isMock ? (
+          <Button
+            label={pl.settings.passkeyAdd}
+            variant="secondary"
+            loading={addPasskey.isPending}
+            onPress={() => addPasskey.mutate()}
+          />
         ) : (
           <Button
             label={pl.settings.passkeyAddLive}

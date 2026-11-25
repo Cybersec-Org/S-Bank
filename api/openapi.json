@@ -700,6 +700,55 @@
         ]
       }
     },
+    "/auth/passkeys": {
+      "get": {
+        "operationId": "PasskeysController_listPasskeys",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List registered WebAuthn Passkeys for the authenticated user",
+        "tags": [
+          "Auth Passkeys"
+        ]
+      }
+    },
+    "/auth/passkeys/{id}": {
+      "delete": {
+        "operationId": "PasskeysController_removePasskey",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a registered WebAuthn Passkey belonging to the authenticated user",
+        "tags": [
+          "Auth Passkeys"
+        ]
+      }
+    },
     "/api/payments/test": {
       "get": {
         "operationId": "PartnersController_getPayments",

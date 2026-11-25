@@ -144,6 +144,7 @@ export class JwtAuthGuard implements CanActivate {
 
     const user: AuthenticatedUser = {
       id: userId,
+      keycloakSub: payload.sub,
       role,
       ipAddress: request.ip || '127.0.0.1',
       acr: payload.acr,

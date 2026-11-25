@@ -84,7 +84,7 @@ export function createHttpRepositories(
     payments: createHttpPaymentsRepository(transport),
     rates: createHttpRatesRepository(transport),
     recipients: createHttpRecipientsRepository(transport),
-    settings: createHttpSettingsRepository(),
+    settings: createHttpSettingsRepository(transport),
     transfers: createHttpTransfersRepository(transport),
   };
 }
