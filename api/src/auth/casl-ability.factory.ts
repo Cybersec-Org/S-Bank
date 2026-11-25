@@ -2,21 +2,9 @@ import { Injectable } from '@nestjs/common';
 import {
   AbilityBuilder,
   createMongoAbility,
-<<<<<<< HEAD
-<<<<<<< HEAD
-  type ExtractSubjectType,
-  type InferSubjects,
-  type MongoAbility,
-=======
   type MongoAbility,
   type InferSubjects,
   type ExtractSubjectType,
->>>>>>> origin/passkeys-and-stepup
-=======
-  type MongoAbility,
-  type InferSubjects,
-  type ExtractSubjectType,
->>>>>>> origin/passkeys-and-stepup
 } from '@casl/ability';
 import { type AuthenticatedUser, Role } from './interfaces/authenticated-user.interface.js';
 

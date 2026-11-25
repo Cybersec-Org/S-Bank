@@ -1,19 +1,9 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 import { useApiMode } from '@/shared/config/ApiModeProvider';
 import { devApiIdentityFor } from '@/shared/auth/dev-api-identity';
 import { useSessionStore } from '@/shared/auth/SessionProvider';
 import { env } from '@/shared/config/env';
-=======
-import { useSessionStore } from '@/shared/auth/SessionProvider';
-import { useApiMode } from '@/shared/config/ApiModeProvider';
->>>>>>> origin/passkeys-and-stepup
-=======
-import { useSessionStore } from '@/shared/auth/SessionProvider';
-import { useApiMode } from '@/shared/config/ApiModeProvider';
->>>>>>> origin/passkeys-and-stepup
 
 import { createRepositories, type Repositories } from './repositories';
 
@@ -37,19 +27,12 @@ export function RepositoriesProvider({ children, repositories }: RepositoriesPro
           const state = sessionStore.getState();
           return state.status === 'signedIn' ? state.principal.acr : '1';
         },
-<<<<<<< HEAD
-<<<<<<< HEAD
         baseUrl: env.apiBaseUrl,
         getIdentity: () => {
           const state = sessionStore.getState();
           return state.status === 'signedIn' ? devApiIdentityFor(state.principal) : null;
         },
-=======
         getAccessToken: () => sessionStore.getAccessToken() ?? undefined,
->>>>>>> origin/passkeys-and-stepup
-=======
-        getAccessToken: () => sessionStore.getAccessToken() ?? undefined,
->>>>>>> origin/passkeys-and-stepup
       }),
     [repositories, mode, sessionStore],
   );

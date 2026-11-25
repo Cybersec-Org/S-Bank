@@ -3,11 +3,8 @@ import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNod
 
 import { useApiMode, useIsMockMode } from '@/shared/config/ApiModeProvider';
 
-<<<<<<< HEAD
 import { DEV_API_PRINCIPALS } from './dev-api-identity';
 
-=======
->>>>>>> origin/passkeys-and-stepup
 import { authenticateWithOidc, isStepUpFresh, signOutFromOidc } from './oidc';
 import { hasRole, type AssuranceLevel, type Principal, type Role } from './roles';
 import { createSessionStore, type SessionStore } from './session-store';

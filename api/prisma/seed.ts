@@ -32,15 +32,6 @@ async function main() {
     },
   });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-  console.log('Creating bank accounts...');
-  const acc1 = await prisma.account.create({
-    data: {
-      iban: 'PL04102010260000140202736451',
-=======
-=======
->>>>>>> origin/passkeys-and-stepup
   console.log('Creating demo bank accounts...');
 
   const acc1 = await prisma.account.upsert({
@@ -48,7 +39,6 @@ async function main() {
     update: {},
     create: {
       iban: 'PL11102010260000140202736451',
->>>>>>> origin/passkeys-and-stepup
       ownerId: 'client-1',
       currency: 'PLN',
       balance: 12500.00,
@@ -70,31 +60,11 @@ async function main() {
     },
   });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-  await prisma.account.create({
-    data: {
-      iban: 'PL74102010260000140202736452',
-      ownerId: 'client-1',
-      currency: 'EUR',
-      balance: 1200.50,
-      dailyLimit: 500.00,
-      status: 'ACTIVE',
-    },
-  });
-
-  const acc2 = await prisma.account.create({
-    data: {
-      iban: 'PL47102010260000140202736453',
-=======
-=======
->>>>>>> origin/passkeys-and-stepup
   const acc2 = await prisma.account.upsert({
     where: { iban: 'PL99102010260000140202736451' },
     update: {},
     create: {
       iban: 'PL99102010260000140202736451',
->>>>>>> origin/passkeys-and-stepup
       ownerId: 'client-2',
       currency: 'PLN',
       balance: 4200.00,

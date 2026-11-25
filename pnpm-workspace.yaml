@@ -29,6 +29,7 @@ allowBuilds:
   esbuild: false
   '@prisma/client': true
   bcrypt: true
+  '@parcel/watcher': set this to true or false
 
 # Transitive fixes for advisories that the Prisma CLI (build/migrate tooling, not API runtime code)
 # pulls in. Remove an entry as soon as Prisma ships a release that depends on a fixed version.

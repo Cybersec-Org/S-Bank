@@ -33,17 +33,9 @@ import type { DevApiIdentity } from '@/shared/auth/dev-api-identity';
 import type { AssuranceLevel } from '@/shared/auth/roles';
 import type { ApiMode } from '@/shared/config/env';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 import { createDevApiTransport, type DevApiTransport } from './dev-api-transport';
-=======
 import type { AccessTokenProvider } from './client';
 import { createHttpTransport } from './http';
->>>>>>> origin/passkeys-and-stepup
-=======
-import type { AccessTokenProvider } from './client';
-import { createHttpTransport } from './http';
->>>>>>> origin/passkeys-and-stepup
 import type { MockOptions } from './mock/mock-runner';
 
 export interface Repositories {
@@ -62,19 +54,11 @@ interface RepositoryContext {
   readonly mode: ApiMode;
   /** Current authentication level; the mock transfer API uses it to emulate the server-side step-up check. */
   readonly getAcr: () => AssuranceLevel;
-<<<<<<< HEAD
-<<<<<<< HEAD
   /** Hybrid mode only: where the dev API runs and who the signed-in demo user is. */
   readonly baseUrl?: string;
   readonly getIdentity?: () => DevApiIdentity | null;
-=======
   /** Current in-memory OIDC access token; used only by live `*.http.ts` repositories. */
   readonly getAccessToken?: AccessTokenProvider | undefined;
->>>>>>> origin/passkeys-and-stepup
-=======
-  /** Current in-memory OIDC access token; used only by live `*.http.ts` repositories. */
-  readonly getAccessToken?: AccessTokenProvider | undefined;
->>>>>>> origin/passkeys-and-stepup
 }
 
 /** Deterministic in-memory repositories; `options` lets tests remove latency or force errors. */
@@ -111,11 +95,9 @@ export function createHttpRepositories(
     recipients: createHttpRecipientsRepository(transport),
     settings: createHttpSettingsRepository(transport),
     transfers: createHttpTransfersRepository(transport),
-<<<<<<< HEAD
   };
 }
 
-<<<<<<< HEAD
 /**
  * Development only: accounts, history, transfers, rates and the employee panel use the dev API; features
  * the API does not have yet (payments, recipients, settings, ATMs, admin) stay on demo data.
@@ -131,18 +113,16 @@ export function createHybridRepositories(
     employee: createDevHttpEmployeeRepository(transport),
     rates: createDevHttpRatesRepository(transport),
     transfers: createDevHttpTransfersRepository(transport),
-=======
->>>>>>> origin/passkeys-and-stepup
   };
 }
 
 /** The only place that decides between mock and live data. */
-<<<<<<< HEAD
 export function createRepositories({
   mode,
   getAcr,
   baseUrl,
   getIdentity,
+  getAccessToken,
 }: RepositoryContext): Repositories {
   switch (mode) {
     case 'mock':
@@ -153,18 +133,6 @@ export function createRepositories({
       }
       return createHybridRepositories(getAcr, createDevApiTransport({ baseUrl, getIdentity }));
     case 'live':
-      return createHttpRepositories();
+      return createHttpRepositories(getAccessToken);
   }
-=======
-/** The only place that decides between mock and live data. */
-=======
->>>>>>> origin/passkeys-and-stepup
-export function createRepositories({ mode, getAcr, getAccessToken }: RepositoryContext): Repositories {
-  return mode === 'mock'
-    ? createMockRepositories(getAcr)
-    : createHttpRepositories(getAccessToken);
-<<<<<<< HEAD
->>>>>>> origin/passkeys-and-stepup
-=======
->>>>>>> origin/passkeys-and-stepup
 }

@@ -900,37 +900,6 @@
         "summary": "Get status of own payment request (BOLA 404 protected between partners)",
         "tags": [
           "Partner mTLS API"
-<<<<<<< HEAD
-        ]
-      }
-    },
-    "/api/payments/test": {
-      "get": {
-        "operationId": "PartnersController_getPayments",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Partners"
-        ]
-      }
-    },
-    "/api/reports/test": {
-      "get": {
-        "operationId": "PartnersController_getReports",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Partners"
-=======
->>>>>>> origin/passkeys-and-stepup
         ]
       }
     }
@@ -1012,18 +981,8 @@
           },
           "receiverIban": {
             "type": "string",
-<<<<<<< HEAD
-<<<<<<< HEAD
-            "example": "PL47102010260000140202736453",
-            "description": "Receiver IBAN"
-=======
             "example": "PL99102010260000140202736451",
             "description": "Receiver IBAN (PL + 26 digits)"
->>>>>>> origin/passkeys-and-stepup
-=======
-            "example": "PL99102010260000140202736451",
-            "description": "Receiver IBAN (PL + 26 digits)"
->>>>>>> origin/passkeys-and-stepup
           },
           "receiverName": {
             "type": "string",

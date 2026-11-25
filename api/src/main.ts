@@ -38,24 +38,10 @@ async function bootstrap() {
   );
 
   const port = Number(process.env['PORT'] ?? 3000);
-<<<<<<< HEAD
-<<<<<<< HEAD
-  // Loopback by default: identity still comes from mock headers. Set HOST=0.0.0.0 to reach the API from a phone on the LAN.
-  const host = process.env['HOST'] ?? '127.0.0.1';
-  await app.listen(port, host);
-  console.log(`Api: http://${host}:${port}`);
-  console.log(`Swagger: http://localhost:${port}/docs`);
-=======
-=======
->>>>>>> origin/passkeys-and-stepup
   await app.listen(port, '0.0.0.0');
   console.log(`API running on: http://localhost:${port}`);
   console.log(`Swagger documentation: http://localhost:${port}/docs`);
   console.log(`Generated openapi.json file successfully!`);
-<<<<<<< HEAD
->>>>>>> origin/passkeys-and-stepup
-=======
->>>>>>> origin/passkeys-and-stepup
 }
 
 bootstrap();

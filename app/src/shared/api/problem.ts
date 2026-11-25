@@ -40,14 +40,7 @@ const problemBodySchema = z.object({
   title: z.string().optional(),
   status: z.number().int().optional(),
   code: z.string().optional(),
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
   statusCode: z.number().int().optional(),
->>>>>>> origin/passkeys-and-stepup
-=======
-  statusCode: z.number().int().optional(),
->>>>>>> origin/passkeys-and-stepup
 });
 
 const NEST_CODE_MAP: Readonly<Record<string, ProblemCode>> = {
@@ -104,20 +97,12 @@ export function parseProblem(body: unknown, httpStatus: number): ApiProblem {
   }
   const code =
     codeFromType(parsed.data.type) ??
-    (parsed.data.code === undefined ? undefined : NEST_CODE_MAP[parsed.data.code]);
+    (parsed.data.code === undefined
+      ? undefined
+      : (NEST_CODE_MAP[parsed.data.code] ?? toKnownCode(parsed.data.code.toLowerCase())));
   return new ApiProblem({
-<<<<<<< HEAD
-<<<<<<< HEAD
-    status: httpStatus,
-    code: codeFromType(parsed.data.type) ?? toKnownCode(parsed.data.code?.toLowerCase()),
-=======
-    status: parsed.data.statusCode ?? httpStatus,
+    status: parsed.data.statusCode ?? parsed.data.status ?? httpStatus,
     code,
->>>>>>> origin/passkeys-and-stepup
-=======
-    status: parsed.data.statusCode ?? httpStatus,
-    code,
->>>>>>> origin/passkeys-and-stepup
     title: parsed.data.title,
     type: parsed.data.type,
   });
