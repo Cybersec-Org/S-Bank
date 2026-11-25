@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { maskIban } from '@/shared/lib/iban';
 import { useAccountsQuery } from '@/features/accounts';
 import { describeProblem, isNotFoundProblem } from '@/shared/api/problem';
+import { OidcAuthError } from '@/shared/auth/oidc';
 import { useSession } from '@/shared/auth/SessionProvider';
 import { useIsMockMode } from '@/shared/config/ApiModeProvider';
 import { useNow } from '@/shared/config/ClockProvider';
@@ -79,6 +80,8 @@ export function PaymentRequestScreen() {
   const isMock = useIsMockMode();
   const now = useNow(COUNTDOWN_TICK_MS);
   const [outcome, setOutcome] = useState<Outcome>({ kind: 'reviewing' });
+  const [stepUpError, setStepUpError] = useState<string | null>(null);
+  const [steppingUp, setSteppingUp] = useState(false);
   const requestQuery = usePaymentRequestQuery(requestId, outcome.kind === 'reviewing');
   const accountsQuery = useAccountsQuery();
   const approve = useApprovePaymentMutation();
@@ -131,15 +134,36 @@ export function PaymentRequestScreen() {
     );
   }
 
-  function handleApprove(current: PaymentRequest, stepUpPending: boolean): void {
+  async function executeApprove(current: PaymentRequest, stepUpPending: boolean): Promise<void> {
+    setStepUpError(null);
     if (stepUpPending) {
-      session.raiseMockAssurance();
+      if (isMock) {
+        session.raiseMockAssurance();
+      } else {
+        setSteppingUp(true);
+        try {
+          await session.stepUpWithPasskey();
+        } catch (error) {
+          if (error instanceof OidcAuthError && error.code === 'cancelled') {
+            setStepUpError(pl.transferConfirm.stepUpCancelled);
+          } else {
+            setStepUpError(pl.transferConfirm.stepUpFailed);
+          }
+          setSteppingUp(false);
+          return;
+        }
+        setSteppingUp(false);
+      }
     }
     idempotencyKey.current ??= createIdempotencyKey();
     approve.mutate(
       { requestId: current.id, idempotencyKey: idempotencyKey.current },
       { onSuccess: () => setOutcome({ kind: 'approved', request: current }) },
     );
+  }
+
+  function handleApprove(current: PaymentRequest, stepUpPending: boolean): void {
+    void executeApprove(current, stepUpPending);
   }
 
   function renderBody() {
@@ -168,8 +192,7 @@ export function PaymentRequestScreen() {
     const expired = request.status === 'expired' || isExpired(request.expiresAt, now);
     const decidable = request.status === 'pending' && !expired;
     const requiresStepUp = amountRequiresStepUp(request.amountGrosze);
-    const stepUpPending = requiresStepUp && session.acr !== '2';
-    const canStepUp = isMock || !stepUpPending;
+    const stepUpPending = requiresStepUp && !session.isStepUpFresh;
     return (
       <Box gap="lg">
         <Box direction="row" wrap gap="sm">
@@ -227,9 +250,10 @@ export function PaymentRequestScreen() {
         {decidable ? <Banner tone="info">{pl.payment.notice}</Banner> : null}
         {decidable && requiresStepUp ? (
           <StepUpPanel title={pl.payment.stepUpHeading}>
-            {canStepUp ? pl.payment.stepUpBody : pl.payment.stepUpUnavailable}
+            {pl.payment.stepUpBody}
           </StepUpPanel>
         ) : null}
+        {stepUpError === null ? null : <Banner tone="warning">{stepUpError}</Banner>}
         {approve.error === null ? null : (
           <Banner tone="danger">{describeProblem(approve.error)}</Banner>
         )}
@@ -238,7 +262,7 @@ export function PaymentRequestScreen() {
           <Box gap="sm">
             <Button
               label={
-                approve.isPending
+                steppingUp || approve.isPending
                   ? pl.payment.approving
                   : requiresStepUp
                     ? pl.payment.payWithPasskey
@@ -247,8 +271,7 @@ export function PaymentRequestScreen() {
               icon={requiresStepUp ? 'key' : undefined}
               size="large"
               onPress={() => handleApprove(request, stepUpPending)}
-              loading={approve.isPending}
-              disabled={!canStepUp}
+              loading={steppingUp || approve.isPending}
               fullWidth
             />
             <Button

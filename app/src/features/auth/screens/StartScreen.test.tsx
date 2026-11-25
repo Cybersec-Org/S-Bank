@@ -1,10 +1,19 @@
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 
+import * as oidc from '@/shared/auth/oidc';
 import { pl } from '@/shared/i18n/pl';
 import { renderWithProviders } from '@/shared/testing/renderWithProviders';
 
 import { StartScreen } from './StartScreen';
+
+function toBase64Url(obj: Record<string, unknown>): string {
+  return btoa(JSON.stringify(obj)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+}
+
+function makeJwt(payload: Record<string, unknown>): string {
+  return `${toBase64Url({ alg: 'RS256', typ: 'JWT' })}.${toBase64Url(payload)}.sig`;
+}
 
 describe('StartScreen', () => {
   describe('in mock mode', () => {
@@ -82,13 +91,38 @@ describe('StartScreen', () => {
       expect(screen.queryByLabelText(pl.common.mockBadge)).not.toBeOnTheScreen();
     });
 
-    it('explains that browser login arrives later instead of faking a session', async () => {
+    it('starts OIDC PKCE with acr_values=2 on passkey sign-in and stores the verified session', async () => {
+      const spy = jest.spyOn(oidc, 'authenticateWithOidc').mockResolvedValue({
+        accessToken: makeJwt({
+          sub: 'kc-1',
+          name: 'Jan Kowalski',
+          acr: '2',
+          auth_time: Math.floor(Date.now() / 1000),
+          realm_access: { roles: ['customer'] },
+        }),
+      });
       const { store } = await renderWithProviders(<StartScreen />, { apiMode: 'live' });
 
       await fireEvent.press(screen.getByRole('button', { name: pl.start.loginPasskey }));
 
-      expect(screen.getByText(pl.start.loginLiveUnavailable)).toBeOnTheScreen();
+      await waitFor(() => {
+        expect(store.getState().status).toBe('signedIn');
+      });
+      expect(spy).toHaveBeenCalledWith({ acrValues: '2' });
+      spy.mockRestore();
+    });
+
+    it('shows access-denied message when staff tries password login without passkey', async () => {
+      const spy = jest
+        .spyOn(oidc, 'authenticateWithOidc')
+        .mockRejectedValue(new oidc.OidcAuthError('access_denied', 'Access denied'));
+      const { store } = await renderWithProviders(<StartScreen />, { apiMode: 'live' });
+
+      await fireEvent.press(screen.getByRole('button', { name: pl.start.loginPassword }));
+
+      expect(await screen.findByText(pl.start.loginAccessDenied)).toBeOnTheScreen();
       expect(store.getState().status).toBe('signedOut');
+      spy.mockRestore();
     });
   });
 });

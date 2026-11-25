@@ -1,9 +1,10 @@
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { FAKE_IBANS, MOCK_MAIN_ACCOUNT_ID } from '@/shared/api/mock/mock-data';
 import { ApiProblem } from '@/shared/api/problem';
 import type { Repositories } from '@/shared/api/repositories';
+import * as oidc from '@/shared/auth/oidc';
 import { pl } from '@/shared/i18n/pl';
 import { renderWithProviders } from '@/shared/testing/renderWithProviders';
 
@@ -110,8 +111,22 @@ describe('TransferConfirmScreen', () => {
     expect(account?.balanceGrosze).toBe(428_015 - 150_000);
   });
 
-  it('cannot simulate a passkey in live mode and says so', async () => {
-    await renderWithProviders(<TransferConfirmScreen />, {
+  it('triggers OIDC passkey step-up (acr_values=2) in live mode before confirming >= 1 000 zł', async () => {
+    const toBase64Url = (obj: Record<string, unknown>) =>
+      btoa(JSON.stringify(obj)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+    const header = toBase64Url({ alg: 'RS256' });
+    const body = toBase64Url({
+      sub: 'kc-1',
+      name: 'Jan Kowalski',
+      acr: '2',
+      auth_time: Math.floor(Date.now() / 1000),
+      realm_access: { roles: ['customer'] },
+    });
+    const spy = jest.spyOn(oidc, 'authenticateWithOidc').mockResolvedValue({
+      accessToken: `${header}.${body}.sig`,
+    });
+
+    const { store } = await renderWithProviders(<TransferConfirmScreen />, {
       apiMode: 'live',
       signedInAs: 'customer',
       arrange: async (repositories) => {
@@ -119,12 +134,17 @@ describe('TransferConfirmScreen', () => {
       },
     });
 
-    await screen.findByText(pl.transferConfirm.stepUpHeading);
+    await fireEvent.press(
+      await screen.findByRole('button', { name: pl.transferConfirm.confirmWithPasskey }),
+    );
 
-    expect(screen.getByText(pl.transferConfirm.stepUpUnavailable)).toBeOnTheScreen();
-    expect(
-      screen.getByRole('button', { name: pl.transferConfirm.confirmWithPasskey }),
-    ).toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByText(pl.transferConfirm.successTitle)).toBeOnTheScreen();
+    });
+    expect(spy).toHaveBeenCalledWith({ acrValues: '2' });
+    const state = store.getState();
+    expect(state.status === 'signedIn' && state.principal.acr).toBe('2');
+    spy.mockRestore();
   });
 
   it('shows the API problem in Polish and reuses the idempotency key when retrying', async () => {

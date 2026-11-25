@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
-import { useApiMode } from '@/shared/config/ApiModeProvider';
 import { useSessionStore } from '@/shared/auth/SessionProvider';
+import { useApiMode } from '@/shared/config/ApiModeProvider';
 
 import { createRepositories, type Repositories } from './repositories';
 
@@ -25,6 +25,7 @@ export function RepositoriesProvider({ children, repositories }: RepositoriesPro
           const state = sessionStore.getState();
           return state.status === 'signedIn' ? state.principal.acr : '1';
         },
+        getAccessToken: () => sessionStore.getAccessToken() ?? undefined,
       }),
     [repositories, mode, sessionStore],
   );

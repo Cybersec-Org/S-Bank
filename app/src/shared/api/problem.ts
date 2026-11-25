@@ -29,7 +29,18 @@ const problemBodySchema = z.object({
   type: z.string().optional(),
   title: z.string().optional(),
   status: z.number().int().optional(),
+  code: z.string().optional(),
+  statusCode: z.number().int().optional(),
 });
+
+const NEST_CODE_MAP: Readonly<Record<string, ProblemCode>> = {
+  STEP_UP_REQUIRED: 'step_up_required',
+  INSUFFICIENT_FUNDS: 'insufficient_funds',
+  DAILY_LIMIT_EXCEEDED: 'daily_limit_exceeded',
+  INVALID_IBAN: 'invalid_iban',
+  REQUEST_EXPIRED: 'request_expired',
+  ACCOUNT_BLOCKED: 'account_blocked',
+};
 
 const PROBLEM_TYPE_PREFIX = '/problems/';
 
@@ -73,9 +84,12 @@ export function parseProblem(body: unknown, httpStatus: number): ApiProblem {
   if (!parsed.success) {
     return new ApiProblem({ status: httpStatus });
   }
+  const code =
+    codeFromType(parsed.data.type) ??
+    (parsed.data.code === undefined ? undefined : NEST_CODE_MAP[parsed.data.code]);
   return new ApiProblem({
-    status: httpStatus,
-    code: codeFromType(parsed.data.type),
+    status: parsed.data.statusCode ?? httpStatus,
+    code,
     title: parsed.data.title,
     type: parsed.data.type,
   });

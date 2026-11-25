@@ -2,6 +2,7 @@ import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { OidcAuthError } from '@/shared/auth/oidc';
 import { homeRouteFor } from '@/shared/auth/roles';
 import { useSession } from '@/shared/auth/SessionProvider';
 import { useIsMockMode } from '@/shared/config/ApiModeProvider';
@@ -10,29 +11,62 @@ import { Banner, Box, Button, Logo, Screen, Text, useTheme } from '@/shared/ui';
 
 import { MockRoleSwitcher } from '../components/MockRoleSwitcher';
 
+type LoginMethod = 'passkey' | 'password' | 'registerPasskey';
+
 /**
- * FR-02: entry point. Live mode will sign in through the system browser (OIDC + PKCE, B-10); until then
- * both sign-in buttons start the demo customer session in mock mode.
+ * FR-02 / SR-01 / SR-03: entry point. Signs in through Keycloak (OIDC + PKCE + Passkeys) in live
+ * mode, or starts the demo customer session in mock mode.
  */
 export function StartScreen() {
   const router = useRouter();
   const theme = useTheme();
   const session = useSession();
   const isMock = useIsMockMode();
-  const [loginNoticeVisible, setLoginNoticeVisible] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [activeMethod, setActiveMethod] = useState<LoginMethod | null>(null);
   const [devVisible, setDevVisible] = useState(false);
 
   if (session.principal !== null) {
     return <Redirect href={homeRouteFor(session.principal)} />;
   }
 
-  function handleLogin(): void {
-    if (isMock) {
-      session.signInAsMock('customer');
-    } else {
-      setLoginNoticeVisible(true);
+  async function runOidc(method: LoginMethod): Promise<void> {
+    setAuthError(null);
+    setActiveMethod(method);
+    try {
+      if (method === 'passkey') {
+        await session.signInWithPasskey();
+      } else if (method === 'password') {
+        await session.signInWithPassword();
+      } else {
+        await session.registerPasskey();
+      }
+    } catch (error) {
+      if (error instanceof OidcAuthError) {
+        if (error.code === 'cancelled') {
+          setAuthError(pl.start.loginCancelled);
+        } else if (error.code === 'access_denied') {
+          setAuthError(pl.start.loginAccessDenied);
+        } else {
+          setAuthError(pl.start.loginFailed);
+        }
+      } else {
+        setAuthError(pl.start.loginFailed);
+      }
+    } finally {
+      setActiveMethod(null);
     }
   }
+
+  function handleLogin(method: LoginMethod): void {
+    if (isMock) {
+      session.signInAsMock('customer');
+      return;
+    }
+    void runOidc(method);
+  }
+
+  const busy = activeMethod !== null;
 
   return (
     <Screen gutter="xl" fill>
@@ -59,22 +93,35 @@ export function StartScreen() {
           label={pl.start.loginPasskey}
           icon="key"
           size="large"
-          onPress={handleLogin}
+          loading={activeMethod === 'passkey'}
+          disabled={busy}
+          onPress={() => handleLogin('passkey')}
           fullWidth
         />
         <Button
           label={pl.start.loginPassword}
           variant="secondary"
           size="large"
-          onPress={handleLogin}
+          loading={activeMethod === 'password'}
+          disabled={busy}
+          onPress={() => handleLogin('password')}
           fullWidth
         />
+        {!isMock ? (
+          <Button
+            label={pl.start.registerPasskey}
+            variant="outline"
+            size="medium"
+            loading={activeMethod === 'registerPasskey'}
+            disabled={busy}
+            onPress={() => handleLogin('registerPasskey')}
+            fullWidth
+          />
+        ) : null}
         <Banner tone="info" icon="shield">
           {pl.start.loginInfo}
         </Banner>
-        {loginNoticeVisible ? (
-          <Banner tone="warning">{pl.start.loginLiveUnavailable}</Banner>
-        ) : null}
+        {authError === null ? null : <Banner tone="warning">{authError}</Banner>}
 
         <Box direction="row" align="center" gap="md">
           <View

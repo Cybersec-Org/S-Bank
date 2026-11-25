@@ -4,6 +4,7 @@ import { View } from 'react-native';
 
 import { useAccountsQuery } from '@/features/accounts';
 import { describeProblem } from '@/shared/api/problem';
+import { OidcAuthError } from '@/shared/auth/oidc';
 import { useSession } from '@/shared/auth/SessionProvider';
 import { useIsMockMode } from '@/shared/config/ApiModeProvider';
 import { pl } from '@/shared/i18n/pl';
@@ -52,7 +53,7 @@ function SummaryRow({ label, children }: { readonly label: string; readonly chil
   );
 }
 
-/** FR-05 / SR-03: shows the server-side draft, explains step-up when needed and confirms by draft id. */
+/** FR-05 / SR-03: shows the server-side draft, handles Passkey step-up when needed and confirms by draft id. */
 export function TransferConfirmScreen() {
   const router = useRouter();
   const theme = useTheme();
@@ -62,6 +63,8 @@ export function TransferConfirmScreen() {
   const session = useSession();
   const isMock = useIsMockMode();
   const [outcome, setOutcome] = useState<Outcome>({ kind: 'reviewing' });
+  const [stepUpError, setStepUpError] = useState<string | null>(null);
+  const [steppingUp, setSteppingUp] = useState(false);
   const accountsQuery = useAccountsQuery();
   const draftQuery = useTransferDraftQuery(draftId, outcome.kind === 'reviewing');
   const confirm = useConfirmTransferMutation();
@@ -115,26 +118,47 @@ export function TransferConfirmScreen() {
     );
   }
 
-  const stepUpSatisfied = draft === undefined || !draft.requiresStepUp || session.acr === '2';
-  // Without the real sign-in (B-10) a passkey confirmation can only be simulated in demo mode.
-  const canStepUp = isMock || stepUpSatisfied;
+  const stepUpSatisfied =
+    draft === undefined || !draft.requiresStepUp || session.isStepUpFresh;
   const sourceAccount = accountsQuery.data?.find(
     (account) => account.id === draft?.sourceAccountId,
   );
+
+  async function executeConfirm(currentDraft: TransferDraft): Promise<void> {
+    setStepUpError(null);
+    if (!stepUpSatisfied) {
+      if (isMock) {
+        session.raiseMockAssurance();
+      } else {
+        setSteppingUp(true);
+        try {
+          await session.stepUpWithPasskey();
+        } catch (error) {
+          if (error instanceof OidcAuthError && error.code === 'cancelled') {
+            setStepUpError(pl.transferConfirm.stepUpCancelled);
+          } else {
+            setStepUpError(pl.transferConfirm.stepUpFailed);
+          }
+          setSteppingUp(false);
+          return;
+        }
+        setSteppingUp(false);
+      }
+    }
+
+    // The same key is reused when the user retries after an error, so the bank can detect a duplicate.
+    idempotencyKey.current ??= createIdempotencyKey();
+    confirm.mutate(
+      { draftId: currentDraft.id, idempotencyKey: idempotencyKey.current },
+      { onSuccess: (receipt) => setOutcome({ kind: 'done', receipt, draft: currentDraft }) },
+    );
+  }
 
   function handleConfirm(): void {
     if (draft === undefined) {
       return;
     }
-    if (!stepUpSatisfied) {
-      session.raiseMockAssurance();
-    }
-    // The same key is reused when the user retries after an error, so the bank can detect a duplicate.
-    idempotencyKey.current ??= createIdempotencyKey();
-    confirm.mutate(
-      { draftId: draft.id, idempotencyKey: idempotencyKey.current },
-      { onSuccess: (receipt) => setOutcome({ kind: 'done', receipt, draft }) },
-    );
+    void executeConfirm(draft);
   }
 
   function handleCancel(): void {
@@ -143,6 +167,8 @@ export function TransferConfirmScreen() {
     }
     cancel.mutate(draft.id, { onSuccess: () => setOutcome({ kind: 'cancelled' }) });
   }
+
+  const busy = steppingUp || confirm.isPending;
 
   return (
     <Screen
@@ -198,7 +224,7 @@ export function TransferConfirmScreen() {
 
             {draft.requiresStepUp ? (
               <StepUpPanel title={pl.transferConfirm.stepUpHeading}>
-                {canStepUp ? pl.transferConfirm.stepUpBody : pl.transferConfirm.stepUpUnavailable}
+                {pl.transferConfirm.stepUpBody}
               </StepUpPanel>
             ) : null}
 
@@ -212,12 +238,13 @@ export function TransferConfirmScreen() {
             </View>
 
             <Box gap="sm">
+              {stepUpError === null ? null : <Banner tone="warning">{stepUpError}</Banner>}
               {confirm.error === null ? null : (
                 <Banner tone="danger">{describeProblem(confirm.error)}</Banner>
               )}
               <Button
                 label={
-                  confirm.isPending
+                  busy
                     ? pl.transferConfirm.confirming
                     : draft.requiresStepUp
                       ? pl.transferConfirm.confirmWithPasskey
@@ -226,8 +253,7 @@ export function TransferConfirmScreen() {
                 icon={draft.requiresStepUp ? 'key' : undefined}
                 size="large"
                 onPress={handleConfirm}
-                loading={confirm.isPending}
-                disabled={!canStepUp}
+                loading={busy}
                 fullWidth
               />
               <Button
@@ -235,7 +261,7 @@ export function TransferConfirmScreen() {
                 onPress={handleCancel}
                 variant="ghost"
                 size="large"
-                disabled={confirm.isPending || cancel.isPending}
+                disabled={busy || cancel.isPending}
                 fullWidth
               />
             </Box>
