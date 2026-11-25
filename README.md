@@ -186,3 +186,45 @@ curl -X GET http://localhost:3000/customers/me \
   ]
 }
 ```
+
+---
+
+## Testy automatyczne
+
+Projekt posiada **47 zestawów testów automatycznych (466 przypadków)** w frameworku **Jest**, pokrywających backend API (`@sbank/api`) oraz aplikację kliencką (`@sbank/app`). 
+
+| Moduł | Kategoria | Zestawy | Przypadki | Zakres |
+| :--- | :--- | :---: | :---: | :--- |
+| **`@sbank/api`** | Jednostkowe, kontrolera i bezpieczeństwa | 9 | 92 | RBAC/ABAC (CASL), autoryzacja ról (`CLIENT`, `EMPLOYEE`, `ADMIN`), walidacja OIDC/JWT i Passkey step-up (`acr=2`), blokada trybu `mock` w produkcji, mTLS i uprawnienia partnerów, ochrona BOLA, logika przelewów i limitów dziennych |
+| **`@sbank/api`** | Integracyjne (PostgreSQL `sbank_test`) | 1 | 6 | Odporność na *race conditions* i *deadlocki*: jednokrotne potwierdzenie szkicu, brak przekroczenia salda i limitu dziennego przy równoległych przelewach, wyścig potwierdzenia z anulowaniem, przeciwne przelewy między parą kont, jednokrotna realizacja żądania płatności |
+| **`@sbank/app`** | Jednostkowe, ekranów i bezpieczeństwa sesji | 37 | 368 | Ekrany i przepływy użytkownika (panel główny, historia, przelewy, odbiorcy, skaner QR / żądania płatności, kursy NBP, bankomaty, widoki pracownika i administratora), bezpieczne przechowywanie sesji (`secure-storage` native/web, `SessionProvider`), warstwa API (`client`, `repositories`, `problem`), walidacja IBAN, kwot i formularzy |
+| **Łącznie** | — | **47** | **466** | — |
+
+### Uruchomienie testów
+
+**1. Testy jednostkowe i komponentowe (bez bazy danych):**
+
+```bash
+# Backend API (9 zestawów, 92 przypadki)
+pnpm --filter @sbank/api test
+
+# Aplikacja kliencka (37 zestawów, 368 przypadków)
+pnpm --filter @sbank/app test --maxWorkers=2
+
+# Raport pokrycia kodu API
+pnpm --filter @sbank/api run test:cov
+```
+
+**2. Testy integracyjne API (wymagają uruchomionego kontenera `postgres` i osobnej bazy `sbank_test`):**
+
+Testy celowo blokują uruchomienie przeciwko głównej bazie `sbank`, aby nie nadpisać danych deweloperskich.
+
+```bash
+# Jednorazowe utworzenie bazy testowej
+docker exec -i s-bank-postgres-1 psql -U sbank -d postgres -c "CREATE DATABASE sbank_test;"
+
+# Migracje i uruchomienie testów z katalogu api/
+cd api
+DATABASE_URL="postgresql://sbank:<POSTGRES_PASSWORD>@127.0.0.1:5432/sbank_test?schema=public" pnpm prisma migrate deploy
+DATABASE_URL="postgresql://sbank:<POSTGRES_PASSWORD>@127.0.0.1:5432/sbank_test?schema=public" pnpm run test:integration
+```
