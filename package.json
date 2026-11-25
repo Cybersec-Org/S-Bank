@@ -29,10 +29,11 @@
     "api:db:check-drift": "pnpm --filter @sbank/api run db:check-drift",
     "api:db:seed": "pnpm --filter @sbank/api run db:seed",
     "api:db:reset": "pnpm --filter @sbank/api run db:reset",
-    "infra:up": "docker compose --env-file .env -f infra/docker-compose.yml up -d --wait",
-    "infra:down": "docker compose --env-file .env -f infra/docker-compose.yml down",
-    "infra:logs": "docker compose --env-file .env -f infra/docker-compose.yml logs -f --tail=200"
-  },
+    "infra:up": "docker compose --env-file .env -f docker-compose.yml up -d --wait",
+    "infra:down": "docker compose --env-file .env -f docker-compose.yml down",
+    "infra:logs": "docker compose --env-file .env -f docker-compose.yml logs -f --tail=200",
+    "secrets:dev": "node ./dev-secrets.mjs"
+ },
   "devDependencies": {
     "prettier": "3.9.9",
     "typescript": "~6.0.3"

@@ -16,7 +16,7 @@ describe('RecipientsScreen', () => {
     expect(screen.getByText('Biuro Testowe Sp. z o.o.')).toBeOnTheScreen();
     expect(screen.getByText('Maria Demonstracyjna')).toBeOnTheScreen();
     expect(screen.queryByText(new RegExp(FAKE_IBANS.recipientJan))).not.toBeOnTheScreen();
-    expect(screen.getAllByText(/^PL•• •••• •••• •••• •••• •••• 000\d$/)).toHaveLength(3);
+    expect(screen.getAllByText(/^•••• 000\d$/)).toHaveLength(3);
   });
 
   it('shows the empty state with no recipients', async () => {

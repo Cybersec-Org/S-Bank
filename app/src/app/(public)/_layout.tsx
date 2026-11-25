@@ -8,7 +8,7 @@ export default function PublicLayout() {
   return (
     <Stack screenOptions={screenOptions}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="rates" options={{ title: pl.nav.rates }} />
+      <Stack.Screen name="rates" options={{ headerShown: false }} />
       <Stack.Screen name="atms" options={{ title: pl.nav.atms }} />
       <Stack.Screen name="terms" options={{ title: pl.nav.terms }} />
     </Stack>

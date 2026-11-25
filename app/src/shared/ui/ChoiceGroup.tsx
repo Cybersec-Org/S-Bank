@@ -31,7 +31,9 @@ export function ChoiceGroup<Value extends string>({
       accessibilityLabel={label}
       style={{ gap: theme.spacing.xs }}
     >
-      <Text variant="label">{label}</Text>
+      <Text variant="label" tone="muted">
+        {label}
+      </Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
         {options.map((option) => {
           const selected = option.value === value;
@@ -49,11 +51,11 @@ export function ChoiceGroup<Value extends string>({
                 justifyContent: 'center',
                 borderRadius: theme.radii.pill,
                 borderWidth: selected ? theme.layout.focusRingWidth : theme.layout.borderWidth,
-                borderColor: selected ? theme.colors.accent : theme.colors.border,
-                backgroundColor: selected ? theme.colors.surfaceMuted : theme.colors.surface,
+                borderColor: selected ? theme.colors.primary : theme.colors.borderStrong,
+                backgroundColor: selected ? theme.colors.primarySoft : theme.colors.surface,
               }}
             >
-              <Text variant="label" tone={selected ? 'accent' : 'default'} align="center">
+              <Text variant="label" tone={selected ? 'onSoft' : 'default'} align="center">
                 {`${selected ? SELECTED_MARK : ''}${option.label}`}
               </Text>
             </Pressable>

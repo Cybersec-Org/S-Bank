@@ -1,5 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
+import { Public } from './auth/policies.guard.js';
 
+
+@Public()
 @Controller()
 export class AppController {
   @Get()

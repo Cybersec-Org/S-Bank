@@ -1,7 +1,10 @@
 import {
   convertGroszeToForeignMinorUnits,
+  formatAmountInput,
   formatMoney,
   formatScaledRate,
+  formatSignedMoney,
+  formatWholeMoney,
   parseAmountToGrosze,
 } from './money';
 
@@ -14,7 +17,7 @@ describe('formatMoney', () => {
     [1250, `12,50${NBSP}zł`],
     [100_000, `1${NBSP}000,00${NBSP}zł`],
     [123_456_789, `1${NBSP}234${NBSP}567,89${NBSP}zł`],
-    [-1250, `-12,50${NBSP}zł`],
+    [-1250, `\u221212,50${NBSP}zł`],
   ])('formats %i grosze as %s', (grosze, expected) => {
     expect(formatMoney(grosze)).toBe(expected);
   });
@@ -25,6 +28,28 @@ describe('formatMoney', () => {
 
   it('rejects non-integer amounts instead of rounding them silently', () => {
     expect(() => formatMoney(12.5)).toThrow(RangeError);
+  });
+});
+
+describe('formatSignedMoney', () => {
+  it('puts a plus before incoming amounts and the typographic minus before outgoing ones', () => {
+    expect(formatSignedMoney(540_000)).toBe(`+5${NBSP}400,00${NBSP}zł`);
+    expect(formatSignedMoney(-1840)).toBe(`\u221218,40${NBSP}zł`);
+    expect(formatSignedMoney(0)).toBe(`0,00${NBSP}zł`);
+  });
+});
+
+describe('formatWholeMoney', () => {
+  it('drops empty grosze and keeps real ones', () => {
+    expect(formatWholeMoney(500_000)).toBe(`5${NBSP}000${NBSP}zł`);
+    expect(formatWholeMoney(500_050)).toBe(`5${NBSP}000,50${NBSP}zł`);
+  });
+});
+
+describe('formatAmountInput', () => {
+  it('gives the plain decimal-comma form used to pre-fill a field', () => {
+    expect(formatAmountInput(428_015)).toBe('4280,15');
+    expect(formatAmountInput(5)).toBe('0,05');
   });
 });
 

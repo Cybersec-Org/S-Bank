@@ -1,7 +1,7 @@
-import { Box, ListItem, MoneyText } from '@/shared/ui';
 import { pl } from '@/shared/i18n/pl';
-import { formatDate } from '@/shared/lib/dates';
-import { formatMoney } from '@/shared/lib/money';
+import { formatDayMonth } from '@/shared/lib/dates';
+import { formatSignedMoney } from '@/shared/lib/money';
+import { Card, ListItem, MoneyText } from '@/shared/ui';
 
 import { signedAmountGrosze, type Transaction } from '../model/account';
 
@@ -9,28 +9,45 @@ interface TransactionListProps {
   readonly transactions: readonly Transaction[];
 }
 
+/** The kind line of a row, for example "Przelew przychodzący". */
+export function transactionKindLabel(transaction: Transaction): string {
+  switch (transaction.kind) {
+    case 'qr_payment':
+      return pl.transaction.kindQrPayment;
+    case 'link_payment':
+      return pl.transaction.kindLinkPayment;
+    case 'transfer':
+      return transaction.direction === 'incoming'
+        ? pl.transaction.kindTransferIn
+        : pl.transaction.kindTransferOut;
+  }
+}
+
+/** List of operations inside one card: name, "kind · date" and the signed amount (incoming in green). */
 export function TransactionList({ transactions }: TransactionListProps) {
   return (
-    <Box>
-      {transactions.map((transaction) => {
+    <Card padding="none" gap="none">
+      {transactions.map((transaction, index) => {
         const signed = signedAmountGrosze(transaction);
-        const kind =
-          transaction.direction === 'incoming' ? pl.transaction.incoming : pl.transaction.outgoing;
+        const kind = transactionKindLabel(transaction);
+        const date = formatDayMonth(transaction.bookedAt);
         return (
           <ListItem
             key={transaction.id}
             title={transaction.title}
-            subtitle={`${transaction.counterpartyName} · ${formatDate(transaction.bookedAt)}`}
-            trailing={<MoneyText grosze={signed} tone={signed < 0 ? 'default' : 'success'} />}
+            subtitle={pl.transaction.detail(kind, date)}
+            last={index === transactions.length - 1}
+            inset
+            trailing={<MoneyText grosze={signed} signed tone={signed < 0 ? 'default' : 'accent'} />}
             accessibilityLabel={pl.transaction.rowLabel(
               kind,
               transaction.title,
-              formatMoney(signed),
-              formatDate(transaction.bookedAt),
+              formatSignedMoney(signed),
+              date,
             )}
           />
         );
       })}
-    </Box>
+    </Card>
   );
 }

@@ -7,16 +7,16 @@ import {
 import type { RatesTable } from '../model/rate';
 import type { RatesRepository } from './rates.repository';
 
-/** Illustrative values, not real NBP data. */
+/** Values of the design; illustrative, not real NBP data. */
 const MOCK_TABLE: RatesTable = {
-  tableNumber: '199/A/NBP/2026',
-  effectiveDate: '2026-10-15T00:00:00.000Z',
+  tableNumber: '196/A/NBP/2026',
+  effectiveDate: '2026-10-08T00:00:00.000Z',
   rates: [
-    { code: 'EUR', name: 'euro', midRateScaled: 42_315 },
-    { code: 'USD', name: 'dolar amerykański', midRateScaled: 39_120 },
-    { code: 'CHF', name: 'frank szwajcarski', midRateScaled: 45_240 },
-    { code: 'GBP', name: 'funt szterling', midRateScaled: 49_780 },
-    { code: 'CZK', name: 'korona czeska', midRateScaled: 1_735 },
+    { code: 'EUR', name: 'euro', midRateScaled: 43_789 },
+    { code: 'USD', name: 'dolar amerykański', midRateScaled: 39_132 },
+    { code: 'CHF', name: 'frank szwajcarski', midRateScaled: 46_926 },
+    { code: 'GBP', name: 'funt szterling', midRateScaled: 51_635 },
+    { code: 'CZK', name: 'korona czeska', midRateScaled: 1_794 },
   ],
 };
 

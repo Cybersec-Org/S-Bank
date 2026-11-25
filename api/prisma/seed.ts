@@ -1,17 +1,17 @@
+
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Cleaning database...');
-  await prisma.auditLog.deleteMany();
-  await prisma.transaction.deleteMany();
-  await prisma.account.deleteMany();
-  await prisma.customer.deleteMany();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  console.log('Creating demo customers...');
 
-  console.log('Creating customers...');
-  await prisma.customer.create({
-    data: {
+  await prisma.customer.upsert({
+    where: { id: 'client-1' },
+    update: {},
+    create: {
       id: 'client-1',
       firstName: 'Jan',
       lastName: 'Kowalski',
@@ -20,8 +20,10 @@ async function main() {
     },
   });
 
-  await prisma.customer.create({
-    data: {
+  await prisma.customer.upsert({
+    where: { id: 'client-2' },
+    update: {},
+    create: {
       id: 'client-2',
       firstName: 'Anna',
       lastName: 'Nowak',
@@ -30,43 +32,53 @@ async function main() {
     },
   });
 
-  console.log('Creating bank accounts...');
-  const acc1 = await prisma.account.create({
-    data: {
+  console.log('Creating demo bank accounts...');
+
+  const acc1 = await prisma.account.upsert({
+    where: { iban: 'PL11102010260000140202736451' },
+    update: {},
+    create: {
       iban: 'PL11102010260000140202736451',
       ownerId: 'client-1',
       currency: 'PLN',
-      balance: 5000.00,
+      balance: 12500.00,
+      dailyLimit: 5000.00,
+      status: 'ACTIVE',
+    },
+  });
+
+  const acc1Eur = await prisma.account.upsert({
+    where: { iban: 'PL22102010260000140202736452' },
+    update: {},
+    create: {
+      iban: 'PL22102010260000140202736452',
+      ownerId: 'client-1',
+      currency: 'EUR',
+      balance: 1850.50,
       dailyLimit: 2000.00,
       status: 'ACTIVE',
     },
   });
 
-  await prisma.account.create({
-    data: {
-      iban: 'PL22102010260000140202736452',
-      ownerId: 'client-1',
-      currency: 'EUR',
-      balance: 1200.50,
-      dailyLimit: 500.00,
-      status: 'ACTIVE',
-    },
-  });
-
-  const acc2 = await prisma.account.create({
-    data: {
+  const acc2 = await prisma.account.upsert({
+    where: { iban: 'PL99102010260000140202736451' },
+    update: {},
+    create: {
       iban: 'PL99102010260000140202736451',
       ownerId: 'client-2',
       currency: 'PLN',
-      balance: 1500.00,
-      dailyLimit: 1000.00,
+      balance: 4200.00,
+      dailyLimit: 5000.00,
       status: 'ACTIVE',
     },
   });
 
   console.log('Creating initial transaction...');
-  await prisma.transaction.create({
-    data: {
+
+  await prisma.transaction.upsert({
+    where: { operationNumber: 'OP-SEED-001' },
+    update: {},
+    create: {
       operationNumber: 'OP-SEED-001',
       senderAccountId: acc1.id,
       receiverAccountId: acc2.id,
@@ -74,9 +86,39 @@ async function main() {
       receiverName: 'Anna Nowak',
       amount: 250.00,
       currency: 'PLN',
-      title: 'Initial seed transfer',
+      title: 'Zwrot za obiad',
       status: 'COMPLETED',
-      executedAt: new Date(),
+      createdAt: yesterday,
+      executedAt: yesterday,
+    },
+  });
+
+  console.log('Creating Keycloak integration...');
+  await prisma.customer.upsert({
+    where: { id: 'client-1' },
+    update: {
+      keycloakSub: 'c8df368e-a7d3-45d7-a5d6-f1e9ab242ab6',
+    },
+    create: {
+      id: 'client-1',
+      keycloakSub: 'c8df368e-a7d3-45d7-a5d6-f1e9ab242ab6',
+      firstName: 'Jan',
+      lastName: 'Kowalski',
+      email: 'jan.kowalski@example.com',
+      customerNumber: 'CUST-1001',
+    },
+  });
+
+  console.log('Creating system configuration...');
+
+  await prisma.systemConfig.upsert({
+    where: { id: 'global' },
+    update: {},
+    create: {
+      id: 'global',
+      stepUpThreshold: 1000,
+      minDailyLimit: 100,
+      maxDailyLimit: 50000,
     },
   });
 
@@ -86,8 +128,9 @@ async function main() {
 main()
   .catch((e) => {
     console.error(e);
-    process.exit(1);
+    process.exitCode = 1;
   })
   .finally(async () => {
     await prisma.$disconnect();
   });
+

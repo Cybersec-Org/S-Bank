@@ -23,12 +23,14 @@ export function ScanScreen() {
       return;
     }
     setShowError(false);
-    router.push({ pathname: '/pay/[requestId]', params: { requestId: candidate } });
+    router.push({
+      pathname: '/pay/[requestId]',
+      params: { requestId: candidate, source: 'qr' },
+    });
   }
 
   return (
-    <Screen title={pl.scan.title}>
-      <Button label={pl.common.back} variant="secondary" onPress={goBack} />
+    <Screen title={pl.scan.title} onBack={goBack} backLabel={pl.common.backToDashboard}>
       <PlaceholderBlock label={pl.scan.scannerPlaceholder} />
       <Banner tone="info">{pl.scan.cameraRationale}</Banner>
       <Box gap="md">
@@ -41,7 +43,7 @@ export function ScanScreen() {
           error={showError ? pl.scan.manualInvalid : undefined}
           autoCapitalize="none"
         />
-        <Button label={pl.scan.manualSubmit} onPress={handleSubmit} />
+        <Button label={pl.scan.manualSubmit} size="large" onPress={handleSubmit} fullWidth />
       </Box>
     </Screen>
   );
