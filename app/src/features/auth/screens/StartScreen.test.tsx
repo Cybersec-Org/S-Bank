@@ -108,7 +108,7 @@ describe('StartScreen', () => {
       await waitFor(() => {
         expect(store.getState().status).toBe('signedIn');
       });
-      expect(spy).toHaveBeenCalledWith({ acrValues: '2' });
+      expect(spy).toHaveBeenCalledWith({ acrValues: '2', passkeyLogin: true });
       spy.mockRestore();
     });
 

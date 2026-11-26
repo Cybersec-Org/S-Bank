@@ -1,0 +1,248 @@
+/*
+ * S-Bank look for the Keycloak login pages (P-16). Colours mirror app/src/shared/ui/theme.ts (lightColors /
+ * darkColors); the font is Figtree, as in the app. Dark mode follows the system setting (keycloak.v2 darkMode).
+ */
+@font-face {
+  font-family: 'Figtree';
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/Figtree_400Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Figtree';
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/Figtree_600SemiBold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Figtree';
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/Figtree_700Bold.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Figtree';
+  font-weight: 800;
+  font-display: swap;
+  src: url('../fonts/Figtree_800ExtraBold.ttf') format('truetype');
+}
+
+:root {
+  --sbank-bg: #f3f6f4;
+  --sbank-surface: #ffffff;
+  --sbank-text: #10201c;
+  --sbank-text-muted: #4a5a55;
+  --sbank-primary: #0e5a47;
+  --sbank-primary-pressed: #0a4335;
+  --sbank-primary-soft: #e1eee9;
+  --sbank-on-primary: #ffffff;
+  --sbank-border: #d5deda;
+  --sbank-border-strong: #b9c7c1;
+  --sbank-danger: #8a2a1b;
+  --sbank-danger-bg: #fbe9e5;
+  --sbank-logo: url('../img/logo.svg');
+
+  --pf-v5-global--FontFamily--text: 'Figtree', system-ui, sans-serif;
+  --pf-v5-global--FontFamily--heading: 'Figtree', system-ui, sans-serif;
+  --pf-v5-global--primary-color--100: var(--sbank-primary);
+  --pf-v5-global--primary-color--200: var(--sbank-primary-pressed);
+  --pf-v5-global--link--Color: var(--sbank-primary);
+  --pf-v5-global--link--Color--hover: var(--sbank-primary-pressed);
+  --pf-v5-global--active-color--100: var(--sbank-primary);
+  --pf-v5-global--BorderColor--100: var(--sbank-border);
+  --pf-v5-global--Color--100: var(--sbank-text);
+  --pf-v5-global--Color--200: var(--sbank-text-muted);
+  --pf-v5-global--danger-color--100: var(--sbank-danger);
+  --keycloak-card-top-color: var(--sbank-primary);
+}
+
+.pf-v5-theme-dark {
+  --sbank-bg: #0e1512;
+  --sbank-surface: #17211d;
+  --sbank-text: #e8f0ec;
+  --sbank-text-muted: #a9b9b3;
+  --sbank-primary: #5cc2a2;
+  --sbank-primary-pressed: #7ad3b7;
+  --sbank-primary-soft: #1b3a31;
+  --sbank-on-primary: #0e1512;
+  --sbank-border: #2b3a35;
+  --sbank-border-strong: #5b6f68;
+  --sbank-danger: #ff9c8a;
+  --sbank-danger-bg: #3b1714;
+  --sbank-logo: url('../img/logo-dark.svg');
+}
+
+/* Page: the app's plain background instead of the Keycloak artwork. */
+.login-pf body,
+body#keycloak-bg {
+  background: var(--sbank-bg);
+  color: var(--sbank-text);
+  font-family: var(--pf-v5-global--FontFamily--text);
+}
+.pf-v5-c-login {
+  --pf-v5-c-login--BackgroundColor: var(--sbank-bg);
+}
+.pf-v5-c-login__container {
+  grid-template-columns: minmax(0, 28rem);
+  padding-inline: 16px;
+}
+
+/* Header: logo tile + "S-Bank" wordmark, as on the app's start screen. PatternFly paints the login header white,
+   so the colour is set on the header itself and on the wrapper. */
+.pf-v5-c-login__header,
+.pf-v5-c-login__header .pf-v5-c-brand,
+.pf-v5-c-login__header #kc-header-wrapper {
+  color: var(--sbank-text);
+}
+#kc-header-wrapper {
+  /* keycloak.v2 sets `color: var(--pf-v5-global--Color--light-100) !important` here: point the variable at our text. */
+  --pf-v5-global--Color--light-100: var(--sbank-text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--pf-v5-global--FontFamily--heading);
+  font-weight: 800;
+  font-size: 34px;
+  line-height: 40px;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--sbank-text);
+}
+#kc-header-wrapper::before {
+  content: '';
+  width: 84px;
+  height: 84px;
+  background: var(--sbank-logo) center / contain no-repeat;
+}
+
+/* Card */
+.pf-v5-c-login__main {
+  --pf-v5-c-login__main--BackgroundColor: var(--sbank-surface);
+  background-color: var(--sbank-surface);
+  border: 1px solid var(--sbank-border);
+  border-radius: 20px;
+  box-shadow: none;
+  overflow: hidden;
+}
+.pf-v5-c-login__main-header {
+  border-top: 0;
+}
+/* Title and language switch stacked, so the title never wraps next to the select. */
+.pf-v5-c-login__main-header {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 12px;
+}
+.pf-v5-c-login__main-header-utilities {
+  align-self: flex-end;
+}
+#kc-page-title,
+.pf-v5-c-title {
+  font-size: 26px;
+  line-height: 32px;
+  font-family: var(--pf-v5-global--FontFamily--heading);
+  font-weight: 700;
+  color: var(--sbank-text);
+}
+
+/* Inputs: one rounded border like the app's TextField; focus ring on the field, not on the inner <input>. */
+.pf-v5-c-form-control {
+  border: 1px solid var(--sbank-border-strong);
+  border-radius: 12px;
+  background: var(--sbank-surface);
+  min-height: 48px;
+}
+.pf-v5-c-form-control::before,
+.pf-v5-c-form-control::after {
+  display: none;
+}
+.pf-v5-c-form-control > input,
+.pf-v5-c-form-control > select {
+  background: transparent;
+  color: var(--sbank-text);
+  outline: none;
+}
+.pf-v5-c-form-control:focus-within {
+  border-color: var(--sbank-primary);
+  box-shadow: 0 0 0 2px var(--sbank-primary-soft);
+}
+.pf-v5-c-form-control.pf-m-error {
+  border-color: var(--sbank-danger);
+}
+/* Password field + "show" button share one rounded frame. */
+.pf-v5-c-input-group {
+  border-radius: 12px;
+}
+.pf-v5-c-input-group > .pf-v5-c-input-group__item:first-child .pf-v5-c-form-control {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+.pf-v5-c-input-group .pf-v5-c-button.pf-m-control {
+  border: 1px solid var(--sbank-border-strong);
+  border-inline-start: 0;
+  border-radius: 0 12px 12px 0;
+  background: var(--sbank-surface);
+  color: var(--sbank-text-muted);
+}
+.pf-v5-c-input-group .pf-v5-c-button.pf-m-control::after {
+  display: none;
+}
+.pf-v5-c-form__label-text {
+  font-weight: 600;
+}
+
+/* Buttons: full-width, rounded, brand colour – like the app's large buttons. */
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--sbank-primary);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--sbank-primary-pressed);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--sbank-primary-pressed);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--sbank-primary-pressed);
+  --pf-v5-c-button--m-primary--Color: var(--sbank-on-primary);
+  --pf-v5-c-button--m-primary--hover--Color: var(--sbank-on-primary);
+  --pf-v5-c-button--m-primary--focus--Color: var(--sbank-on-primary);
+  --pf-v5-c-button--m-primary--active--Color: var(--sbank-on-primary);
+}
+.pf-v5-c-button.pf-m-secondary {
+  --pf-v5-c-button--m-secondary--Color: var(--sbank-primary);
+  --pf-v5-c-button--m-secondary--after--BorderColor: var(--sbank-primary);
+  --pf-v5-c-button--m-secondary--hover--Color: var(--sbank-primary-pressed);
+  --pf-v5-c-button--m-secondary--hover--after--BorderColor: var(--sbank-primary-pressed);
+}
+.pf-v5-c-button.pf-m-primary,
+.pf-v5-c-button.pf-m-secondary {
+  border-radius: 14px;
+  min-height: 52px;
+  font-weight: 700;
+  font-size: 17px;
+}
+.pf-v5-c-button::after {
+  border-radius: 14px;
+}
+
+/* Alerts (wrong password, lockout, staff passkey notice) */
+.pf-v5-c-alert.pf-m-danger,
+.pf-v5-c-alert.pf-m-error {
+  --pf-v5-c-alert--BackgroundColor: var(--sbank-danger-bg);
+  border-radius: 12px;
+}
+.pf-v5-c-alert {
+  border-radius: 12px;
+}
+
+/* Footer links */
+.pf-v5-c-login__main-footer-band {
+  background: transparent;
+}
+
+@media (max-width: 480px) {
+  #kc-header-wrapper {
+    font-size: 28px;
+    line-height: 34px;
+  }
+  #kc-header-wrapper::before {
+    width: 64px;
+    height: 64px;
+  }
+}

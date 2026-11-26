@@ -141,7 +141,12 @@ describe('TransferConfirmScreen', () => {
     await waitFor(() => {
       expect(screen.getByText(pl.transferConfirm.successTitle)).toBeOnTheScreen();
     });
-    expect(spy).toHaveBeenCalledWith({ acrValues: '2' });
+    // A fresh Passkey use is forced (prompt=login, max_age=0), so the SSO session cannot satisfy the step-up.
+    expect(spy).toHaveBeenCalledWith({
+      acrValues: '2',
+      passkeyLogin: true,
+      forceReauthentication: true,
+    });
     const state = store.getState();
     expect(state.status === 'signedIn' && state.principal.acr).toBe('2');
     spy.mockRestore();

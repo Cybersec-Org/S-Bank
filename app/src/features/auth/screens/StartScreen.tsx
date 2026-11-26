@@ -1,8 +1,8 @@
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { OidcAuthError } from '@/shared/auth/oidc';
+import { OidcAuthError, type OidcErrorCode } from '@/shared/auth/oidc';
 import { homeRouteFor } from '@/shared/auth/roles';
 import { useSession } from '@/shared/auth/SessionProvider';
 import { useIsMockMode } from '@/shared/config/ApiModeProvider';
@@ -13,6 +13,22 @@ import { MockRoleSwitcher } from '../components/MockRoleSwitcher';
 
 type LoginMethod = 'passkey' | 'password' | 'registerPasskey';
 
+const ERROR_MESSAGES: Readonly<Record<OidcErrorCode, string>> = {
+  cancelled: pl.start.loginCancelled,
+  access_denied: pl.start.loginAccessDenied,
+  passkey_required: pl.start.loginPasskeyRequired,
+  failed: pl.start.loginFailed,
+};
+
+/** Web (P-17): a sign-in that came back with an error lands here as `/?authError=<code>`. */
+function messageForCode(code: string | string[] | undefined): string | null {
+  const value = Array.isArray(code) ? code[0] : code;
+  if (value === undefined) {
+    return null;
+  }
+  return value in ERROR_MESSAGES ? ERROR_MESSAGES[value as OidcErrorCode] : pl.start.loginFailed;
+}
+
 /**
  * FR-02 / SR-01 / SR-03: entry point. Signs in through Keycloak (OIDC + PKCE + Passkeys) in live
  * mode, or starts the demo customer session in mock mode.
@@ -22,7 +38,8 @@ export function StartScreen() {
   const theme = useTheme();
   const session = useSession();
   const isMock = useIsMockMode();
-  const [authError, setAuthError] = useState<string | null>(null);
+  const { authError: authErrorParam } = useLocalSearchParams<{ authError?: string }>();
+  const [authError, setAuthError] = useState<string | null>(() => messageForCode(authErrorParam));
   const [activeMethod, setActiveMethod] = useState<LoginMethod | null>(null);
   const [devVisible, setDevVisible] = useState(false);
 
@@ -42,17 +59,9 @@ export function StartScreen() {
         await session.registerPasskey();
       }
     } catch (error) {
-      if (error instanceof OidcAuthError) {
-        if (error.code === 'cancelled') {
-          setAuthError(pl.start.loginCancelled);
-        } else if (error.code === 'access_denied') {
-          setAuthError(pl.start.loginAccessDenied);
-        } else {
-          setAuthError(pl.start.loginFailed);
-        }
-      } else {
-        setAuthError(pl.start.loginFailed);
-      }
+      setAuthError(
+        error instanceof OidcAuthError ? ERROR_MESSAGES[error.code] : pl.start.loginFailed,
+      );
     } finally {
       setActiveMethod(null);
     }
@@ -123,34 +132,40 @@ export function StartScreen() {
         </Banner>
         {authError === null ? null : <Banner tone="warning">{authError}</Banner>}
 
-        <Box direction="row" align="center" gap="md">
-          <View
-            style={{
-              flex: 1,
-              height: theme.layout.borderWidth,
-              backgroundColor: theme.colors.border,
-            }}
-          />
-          <Text variant="caption" tone="muted">
-            {pl.start.sessionDivider}
-          </Text>
-          <View
-            style={{
-              flex: 1,
-              height: theme.layout.borderWidth,
-              backgroundColor: theme.colors.border,
-            }}
-          />
-        </Box>
-        <Button
-          label={pl.start.unlockBiometrics}
-          variant="outline"
-          size="medium"
-          disabled
-          accessibilityHint={pl.start.unlockBiometricsSoon}
-          onPress={() => undefined}
-          fullWidth
-        />
+        {/* Biometric unlock arrives with the refresh token in SecureStore (stage 11, P-09); until then the
+            disabled placeholder stays in the demo only, so live mode shows nothing that cannot work. */}
+        {isMock ? (
+          <>
+            <Box direction="row" align="center" gap="md">
+              <View
+                style={{
+                  flex: 1,
+                  height: theme.layout.borderWidth,
+                  backgroundColor: theme.colors.border,
+                }}
+              />
+              <Text variant="caption" tone="muted">
+                {pl.start.sessionDivider}
+              </Text>
+              <View
+                style={{
+                  flex: 1,
+                  height: theme.layout.borderWidth,
+                  backgroundColor: theme.colors.border,
+                }}
+              />
+            </Box>
+            <Button
+              label={pl.start.unlockBiometrics}
+              variant="outline"
+              size="medium"
+              disabled
+              accessibilityHint={pl.start.unlockBiometricsSoon}
+              onPress={() => undefined}
+              fullWidth
+            />
+          </>
+        ) : null}
 
         <Box direction="row" justify="center" gap="xl" wrap>
           <Button

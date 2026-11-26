@@ -39,7 +39,8 @@ export const pl = {
     tooManyRequests: 'Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.',
     server: 'Usługa banku jest chwilowo niedostępna. Spróbuj ponownie później.',
     stepUpRequired: 'Ta operacja wymaga dodatkowego potwierdzenia kluczem dostępu.',
-    passkeyRequired: 'Konto pracownika i administratora musi mieć przynajmniej jeden klucz dostępu.',
+    passkeyRequired:
+      'Konto pracownika i administratora musi mieć przynajmniej jeden klucz dostępu.',
     insufficientFunds: 'Na rachunku brakuje środków na tę operację.',
     dailyLimitExceeded: 'Ta operacja przekroczyłaby dzienny limit.',
     invalidIban: 'Numer rachunku jest niepoprawny.',
@@ -92,11 +93,14 @@ export const pl = {
     loginPassword: 'Zaloguj się hasłem',
     loginInfo:
       'Logowanie otworzy stronę banku w przeglądarce systemowej. Aplikacja nigdy nie widzi Twojego hasła.',
-    loginLiveUnavailable: 'Logowanie przez przeglądarkę systemową zostało anulowane lub nie powiodło się.',
+    loginLiveUnavailable:
+      'Logowanie przez przeglądarkę systemową zostało anulowane lub nie powiodło się.',
     loginCancelled: 'Logowanie zostało anulowane.',
     loginAccessDenied:
       'Odmowa dostępu. Pracownik i administrator muszą zalogować się kluczem dostępu (Passkey).',
     loginFailed: 'Nie udało się zalogować przez serwer tożsamości. Spróbuj ponownie.',
+    loginPasskeyRequired:
+      'Pracownik i administrator logują się kluczem dostępu. Wybierz „Zaloguj się kluczem dostępu”.',
     registerPasskey: 'Zarejestruj klucz dostępu (Passkey)',
     sessionDivider: 'masz już sesję na tym urządzeniu?',
     unlockBiometrics: 'Odblokuj biometrią',
@@ -261,7 +265,8 @@ export const pl = {
     stepUpUnavailable:
       'Potwierdzenie kluczem dostępu zostało anulowane lub nie powiodło się. Spróbuj ponownie.',
     stepUpCancelled: 'Potwierdzenie kluczem dostępu zostało anulowane.',
-    stepUpFailed: 'Nie udało się potwierdzić operacji kluczem dostępu. Upewnij się, że masz zarejestrowany Passkey.',
+    stepUpFailed:
+      'Nie udało się potwierdzić operacji kluczem dostępu. Upewnij się, że masz zarejestrowany Passkey.',
     signedNote: 'Po wykonaniu dostaniesz potwierdzenie podpisane przez bank.',
     confirmWithPasskey: 'Potwierdź kluczem dostępu',
     confirm: 'Potwierdź przelew',

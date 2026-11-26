@@ -43,6 +43,8 @@ services:
     volumes:
       - keycloak_data:/opt/keycloak/data
       - ./infra/keycloak:/opt/keycloak/data/import:ro
+      # S-Bank login theme (P-16); start-dev disables the theme cache, so edits show after a page reload.
+      - ./infra/keycloak/themes/sbank:/opt/keycloak/themes/sbank:ro
 
   api:
     build:
