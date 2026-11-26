@@ -22,9 +22,10 @@ describe('createApiClient', () => {
       },
     });
 
-    const { data } = await client.GET('/api/me');
+    const { data } = await client.GET('/customers/me');
 
-    expect(data?.subject).toBe(SUBJECT);
+    // The contract has no response schemas yet, so the body is checked as plain data.
+    expect(data).toEqual({ subject: SUBJECT, roles: ['customer'], acr: '1' });
     expect(seen[0]?.headers.get('Authorization')).toBe('Bearer test-token');
   });
 
@@ -39,7 +40,7 @@ describe('createApiClient', () => {
       },
     });
 
-    await client.GET('/api/me');
+    await client.GET('/customers/me');
 
     expect(seen[0]?.headers.has('Authorization')).toBe(false);
   });
@@ -63,7 +64,7 @@ describe('createApiClient', () => {
         ),
     });
 
-    const failure = await client.GET('/api/me').catch((error: unknown) => error);
+    const failure = await client.GET('/customers/me').catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(ApiProblem);
     expect(failure).toMatchObject({ status: 403 });
@@ -77,7 +78,7 @@ describe('createApiClient', () => {
       fetch: () => Promise.resolve(new Response('<html>bad gateway</html>', { status: 502 })),
     });
 
-    const failure = await client.GET('/api/me').catch((error: unknown) => error);
+    const failure = await client.GET('/customers/me').catch((error: unknown) => error);
 
     expect(failure).toMatchObject({ name: 'ApiProblem', status: 502 });
   });

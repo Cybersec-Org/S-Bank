@@ -8,8 +8,21 @@ import { z } from 'zod';
 export const API_MODES = ['mock', 'hybrid', 'live'] as const;
 export type ApiMode = (typeof API_MODES)[number];
 
-const DEFAULT_API_BASE_URL = 'https://localhost:3000';
-const DEFAULT_OIDC_ISSUER_URL = 'https://localhost:8080/auth/realms/sbank';
+/**
+ * Development defaults match docker-compose.yml: the API on 127.0.0.1:3000 and Keycloak 26 (`start-dev`, no `/auth`
+ * prefix) with the fixed issuer from KC_HOSTNAME. Production placeholders stay https so the https rule below holds;
+ * a real production build sets both URLs explicitly.
+ */
+const DEFAULT_URLS = {
+  development: {
+    apiBaseUrl: 'http://localhost:3000',
+    oidcIssuerUrl: 'http://localhost:8080/realms/sbank',
+  },
+  production: {
+    apiBaseUrl: 'https://localhost:3000',
+    oidcIssuerUrl: 'https://localhost:8080/realms/sbank',
+  },
+} as const;
 const DEFAULT_OIDC_CLIENT_ID = 'sbank-app';
 
 const rawEnvSchema = z.object({
@@ -38,6 +51,7 @@ function emptyToUndefined(value: string | undefined): string | undefined {
  * Only variable names are reported on failure, never values.
  */
 export function parseEnv(raw: RawPublicEnv, isProduction: boolean): AppEnv {
+  const defaults = DEFAULT_URLS[isProduction ? 'production' : 'development'];
   const result = rawEnvSchema
     .refine((value) => !isProduction || value.apiMode !== 'hybrid', {
       path: ['apiMode'],
@@ -54,8 +68,8 @@ export function parseEnv(raw: RawPublicEnv, isProduction: boolean): AppEnv {
     })
     .safeParse({
       apiMode: emptyToUndefined(raw.EXPO_PUBLIC_API_MODE) ?? (isProduction ? 'live' : 'mock'),
-      apiBaseUrl: emptyToUndefined(raw.EXPO_PUBLIC_API_BASE_URL) ?? DEFAULT_API_BASE_URL,
-      oidcIssuerUrl: emptyToUndefined(raw.EXPO_PUBLIC_OIDC_ISSUER_URL) ?? DEFAULT_OIDC_ISSUER_URL,
+      apiBaseUrl: emptyToUndefined(raw.EXPO_PUBLIC_API_BASE_URL) ?? defaults.apiBaseUrl,
+      oidcIssuerUrl: emptyToUndefined(raw.EXPO_PUBLIC_OIDC_ISSUER_URL) ?? defaults.oidcIssuerUrl,
       oidcClientId: emptyToUndefined(raw.EXPO_PUBLIC_OIDC_CLIENT_ID) ?? DEFAULT_OIDC_CLIENT_ID,
     });
   if (!result.success) {

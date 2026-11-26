@@ -29,11 +29,16 @@ services:
       KC_DB_USERNAME: ${POSTGRES_USER}
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
       KC_HEALTH_ENABLED: "true"
+      # Fixed public issuer (D15, P-04): browser, emulator (adb reverse) and API all see
+      # iss = http://localhost:8080/realms/sbank. Back-channel calls from containers (http://keycloak:8080)
+      # keep working thanks to the dynamic back-channel hostname.
+      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
       - "127.0.0.1:9000:9000"
     volumes:
       - keycloak_data:/opt/keycloak/data
@@ -46,13 +51,28 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3000
+      NODE_ENV: development
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sbank}
+      # OIDC (P-04): tokens carry the public issuer; keys are fetched inside the Compose network (A12).
+      AUTH_MODE: oidc
+      OIDC_ISSUER_URL: http://localhost:8080/realms/sbank
+      OIDC_JWKS_URL: http://keycloak:8080/realms/sbank/protocol/openid-connect/certs
+      OIDC_AUDIENCE: sbank-api
+      OIDC_CLIENT_ID: sbank-app
+      # Passkey list/delete (/auth/passkeys) still uses the master admin account - open item A5.
+      KEYCLOAK_ADMIN_URL: http://keycloak:8080
+      KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       PARTNER_PROXY_TOKEN: ${PARTNER_PROXY_TOKEN:?Set PARTNER_PROXY_TOKEN in .env}
       PARTNER1_CERT_SHA256: ${PARTNER1_CERT_SHA256:?Set PARTNER1_CERT_SHA256 in .env}
       PARTNER2_CERT_SHA256: ${PARTNER2_CERT_SHA256:?Set PARTNER2_CERT_SHA256 in .env}
     depends_on:
       postgres:
         condition: service_healthy
+      keycloak:
+        condition: service_started
+    ports:
+      - "127.0.0.1:3000:3000"
     healthcheck:
       test:
         - CMD

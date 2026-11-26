@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from './auth/policies.guard.js';
+import { HealthDto } from './common/dto/error-response.dto.js';
 
 @Public()
 @ApiTags('Public')
@@ -8,6 +9,7 @@ import { Public } from './auth/policies.guard.js';
 export class HealthController {
   @Get()
   @ApiOperation({ summary: 'Checks server health' })
+  @ApiOkResponse({ type: HealthDto })
   check() {
     return {
       status: 'ok',

@@ -13,6 +13,19 @@ describe('parseEnv', () => {
     expect(parseEnv({ EXPO_PUBLIC_API_MODE: '  ' }, true).apiMode).toBe('live');
   });
 
+  it('defaults to the docker-compose.yml addresses in development (API on localhost:3000, Keycloak issuer)', () => {
+    const env = parseEnv({}, false);
+    expect(env.apiBaseUrl).toBe('http://localhost:3000');
+    expect(env.oidcIssuerUrl).toBe('http://localhost:8080/realms/sbank');
+    expect(env.oidcClientId).toBe('sbank-app');
+  });
+
+  it('keeps https placeholders in production, so the https rule still holds without explicit URLs', () => {
+    const env = parseEnv({}, true);
+    expect(env.apiBaseUrl.startsWith('https://')).toBe(true);
+    expect(env.oidcIssuerUrl.startsWith('https://')).toBe(true);
+  });
+
   it('honours an explicit mode', () => {
     expect(parseEnv({ EXPO_PUBLIC_API_MODE: 'mock' }, true).apiMode).toBe('mock');
     expect(parseEnv({ EXPO_PUBLIC_API_MODE: 'live' }, false).apiMode).toBe('live');

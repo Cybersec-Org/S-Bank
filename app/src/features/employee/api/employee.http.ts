@@ -43,18 +43,12 @@ const apiCustomerDetailsSchema = apiCustomerSummarySchema.extend({
   transactions: z.array(apiTransactionSchema).default([]),
 });
 
-function parseCustomerNumber(raw: string): number {
-  const digits = raw.replace(/\D/g, '');
-  const parsed = Number.parseInt(digits, 10);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
 function mapSummary(raw: z.infer<typeof apiCustomerSummarySchema>): CustomerSummary {
   return {
     id: raw.id,
     displayName: `${raw.firstName} ${raw.lastName}`.trim(),
     email: raw.email,
-    customerNumber: parseCustomerNumber(raw.customerNumber),
+    customerNumber: raw.customerNumber,
   };
 }
 

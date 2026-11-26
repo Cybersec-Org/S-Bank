@@ -7,7 +7,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthDto"
+                }
+              }
+            }
           }
         },
         "summary": "Checks server health",
@@ -22,7 +29,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatesDto"
+                }
+              }
+            }
           }
         },
         "summary": "Get current NBP exchange rates table",
@@ -65,7 +79,24 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid amount or unsupported currency",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Convert amount between any supported currencies",
@@ -91,7 +122,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AtmsDto"
+                }
+              }
+            }
           }
         },
         "summary": "Get ATM locations for map display and local GPS sorting (OpenStreetMap Overpass API)",
@@ -106,7 +144,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TermsDto"
+                }
+              }
+            }
           }
         },
         "summary": "Get static HTML terms and conditions for secure WebView",
@@ -121,7 +166,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicKeyDto"
+                }
+              }
+            }
           }
         },
         "summary": "Get bank public key (PEM) for verifying transfer confirmations",
@@ -134,9 +186,36 @@
       "post": {
         "operationId": "PublicController_verifyConfirmation",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyConfirmationRequestDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyConfirmationResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "payload or signature missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Verify cryptographic signature of a transfer confirmation",
@@ -151,7 +230,37 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AccountDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -171,7 +280,37 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditLogDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -191,7 +330,34 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemConfigDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -219,7 +385,34 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemConfigDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -248,7 +441,44 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ACCOUNT_NOT_FOUND (also for accounts of other customers)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -277,7 +507,47 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Completed transactions, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransactionDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ACCOUNT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -316,7 +586,54 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "LIMIT_OUT_OF_RANGE or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ACCOUNT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -355,7 +672,54 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ACCOUNT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -385,7 +749,64 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferDraftDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "SAME_ACCOUNT_TRANSFER, CURRENCY_MISMATCH or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ACCOUNT_NOT_FOUND or RECIPIENT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "INSUFFICIENT_FUNDS or DAILY_LIMIT_EXCEEDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -414,7 +835,44 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferDraftDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TRANSFER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -443,7 +901,54 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferConfirmedDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TRANSFER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "INSUFFICIENT_FUNDS or DAILY_LIMIT_EXCEEDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -472,7 +977,44 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferCancelledDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "TRANSFER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -492,7 +1034,37 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RecipientDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -520,7 +1092,44 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipientDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -549,7 +1158,44 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "RECIPIENT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -578,7 +1224,44 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentRequestDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PAYMENT_REQUEST_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -607,7 +1290,54 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferConfirmedDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PAYMENT_REQUEST_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "INSUFFICIENT_FUNDS or DAILY_LIMIT_EXCEEDED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -627,7 +1357,34 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -657,7 +1414,37 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CustomerSummaryDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -686,7 +1473,44 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDetailsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token, or a CLIENT not linked to a customer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CUSTOMER_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -706,7 +1530,37 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PasskeyResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "PASSKEY_REQUIRED (staff without acr=2, or removing the last staff Passkey)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -735,7 +1589,44 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletedDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid or expired token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "PASSKEY_REQUIRED (staff without acr=2, or removing the last staff Passkey)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PASSKEY_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -774,7 +1665,34 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerTestDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request did not come through Caddy mTLS or the partner is unknown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Partner lacks the required permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Test endpoint for partner payments:read permission",
@@ -808,7 +1726,34 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerTestDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request did not come through Caddy mTLS or the partner is unknown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Partner lacks the required permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Test endpoint for partner reports:read permission",
@@ -852,7 +1797,44 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerPaymentRequestCreatedDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request did not come through Caddy mTLS or the partner is unknown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Partner lacks the required permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Create a payment request for QR code / deep link sbank://pay/{id}",
@@ -894,7 +1876,44 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentRequestDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request did not come through Caddy mTLS or the partner is unknown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Partner lacks the required permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PAYMENT_REQUEST_NOT_FOUND (also for requests of other partners)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Get status of own payment request (BOLA 404 protected between partners)",
@@ -921,6 +1940,491 @@
       }
     },
     "schemas": {
+      "HealthDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "status",
+          "timestamp"
+        ]
+      },
+      "ExchangeRateDto": {
+        "type": "object",
+        "properties": {
+          "currency": {
+            "type": "string",
+            "example": "Euro"
+          },
+          "code": {
+            "type": "string",
+            "example": "EUR"
+          },
+          "mid": {
+            "type": "number",
+            "example": 4.2645,
+            "description": "NBP table A mid rate in PLN"
+          }
+        },
+        "required": [
+          "currency",
+          "code",
+          "mid"
+        ]
+      },
+      "RatesDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "example": "nbp_api",
+            "description": "nbp_api, cache or stale_cache"
+          },
+          "effectiveDate": {
+            "type": "string",
+            "example": "2026-11-26"
+          },
+          "rates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeRateDto"
+            }
+          }
+        },
+        "required": [
+          "source",
+          "effectiveDate",
+          "rates"
+        ]
+      },
+      "ConversionDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "example": 100
+          },
+          "fromCurrency": {
+            "type": "string",
+            "example": "PLN"
+          },
+          "toCurrency": {
+            "type": "string",
+            "example": "EUR"
+          },
+          "convertedAmount": {
+            "type": "number",
+            "example": 23.45
+          },
+          "exchangeRate": {
+            "type": "number",
+            "example": 0.2345
+          },
+          "effectiveDate": {
+            "type": "string",
+            "example": "2026-11-26"
+          }
+        },
+        "required": [
+          "amount",
+          "fromCurrency",
+          "toCurrency",
+          "convertedAmount",
+          "exchangeRate",
+          "effectiveDate"
+        ]
+      },
+      "ErrorResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "STEP_UP_REQUIRED",
+            "description": "Machine-readable error code, e.g. STEP_UP_REQUIRED, PASSKEY_REQUIRED, FORBIDDEN, ACCOUNT_NOT_FOUND, TRANSFER_NOT_FOUND, RECIPIENT_NOT_FOUND, INSUFFICIENT_FUNDS, DAILY_LIMIT_EXCEEDED, ACCOUNT_BLOCKED, CURRENCY_MISMATCH, SAME_ACCOUNT_TRANSFER, LIMIT_OUT_OF_RANGE, PAYMENT_REQUEST_NOT_FOUND, PASSKEY_NOT_FOUND"
+          },
+          "message": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "Human-readable explanation (a list of messages for validation errors). Not for display."
+          },
+          "statusCode": {
+            "type": "number",
+            "example": 401,
+            "description": "HTTP status (Nest default error format only)"
+          },
+          "error": {
+            "type": "string",
+            "example": "Unauthorized",
+            "description": "HTTP reason phrase (Nest default error format only)"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "AtmDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "atm-ktw-1"
+          },
+          "name": {
+            "type": "string",
+            "example": "S-Bankomat Galeria Katowicka"
+          },
+          "operator": {
+            "type": "string",
+            "example": "S-Bank"
+          },
+          "city": {
+            "type": "string",
+            "example": "Katowice"
+          },
+          "street": {
+            "type": "string",
+            "example": "3 Maja 30"
+          },
+          "lat": {
+            "type": "number",
+            "example": 50.2599
+          },
+          "lng": {
+            "type": "number",
+            "example": 19.0216
+          },
+          "cashAvailable": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "operator",
+          "city",
+          "street",
+          "lat",
+          "lng",
+          "cashAvailable"
+        ]
+      },
+      "AtmsDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "example": "osm_nominatim_api",
+            "description": "sbank_directory, osm_cache, osm_nominatim_api or fallback"
+          },
+          "city": {
+            "type": "string",
+            "example": "Katowice",
+            "description": "Resolved city, ALL when no city was given"
+          },
+          "atms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AtmDto"
+            }
+          }
+        },
+        "required": [
+          "source",
+          "city",
+          "atms"
+        ]
+      },
+      "TermsDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "example": "2026.11"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-11-17"
+          },
+          "html": {
+            "type": "string",
+            "description": "Static HTML document; render in a sandbox without JavaScript"
+          }
+        },
+        "required": [
+          "version",
+          "updatedAt",
+          "html"
+        ]
+      },
+      "PublicKeyDto": {
+        "type": "object",
+        "properties": {
+          "keyId": {
+            "type": "string",
+            "example": "sbank-transfer-signing-2026"
+          },
+          "algorithm": {
+            "type": "string",
+            "example": "ECDSA_P256_SHA256"
+          },
+          "provider": {
+            "type": "string",
+            "example": "Software-HSM-Fallback",
+            "description": "SoftHSM2-PKCS11 or Software-HSM-Fallback"
+          },
+          "publicKeyPem": {
+            "type": "string",
+            "description": "SPKI public key in PEM format"
+          }
+        },
+        "required": [
+          "keyId",
+          "algorithm",
+          "provider",
+          "publicKeyPem"
+        ]
+      },
+      "VerifyConfirmationPayloadDto": {
+        "type": "object",
+        "properties": {
+          "operationNumber": {
+            "type": "string",
+            "example": "OP-1795725463000-1234"
+          },
+          "senderIban": {
+            "type": "string",
+            "example": "PL11102010260000140202736451"
+          },
+          "receiverIban": {
+            "type": "string",
+            "example": "PL99102010260000140202736451"
+          },
+          "amount": {
+            "type": "number",
+            "example": 1250
+          },
+          "currency": {
+            "type": "string",
+            "example": "PLN"
+          },
+          "executedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "operationNumber",
+          "senderIban",
+          "receiverIban",
+          "amount",
+          "currency",
+          "executedAt"
+        ]
+      },
+      "VerifyConfirmationRequestDto": {
+        "type": "object",
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/VerifyConfirmationPayloadDto"
+          },
+          "signature": {
+            "type": "string",
+            "description": "Base64 signature from the transfer confirmation"
+          }
+        },
+        "required": [
+          "payload",
+          "signature"
+        ]
+      },
+      "VerifyConfirmationResultDto": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "valid"
+        ]
+      },
+      "AccountDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "acc-1"
+          },
+          "iban": {
+            "type": "string",
+            "example": "PL11102010260000140202736451"
+          },
+          "ownerId": {
+            "type": "string",
+            "example": "client-1",
+            "description": "Customer id of the owner"
+          },
+          "currency": {
+            "type": "string",
+            "example": "PLN"
+          },
+          "balance": {
+            "type": "number",
+            "example": 12500,
+            "description": "Balance in the account currency"
+          },
+          "dailyLimit": {
+            "type": "number",
+            "example": 5000,
+            "description": "Daily outgoing limit"
+          },
+          "dailyUsed": {
+            "type": "number",
+            "example": 150.5,
+            "description": "Sum of completed outgoing transfers since local midnight"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "FROZEN",
+              "CLOSED"
+            ],
+            "example": "ACTIVE"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ownerFirstName": {
+            "type": "string",
+            "example": "Jan",
+            "description": "Present when the owner was loaded with the account"
+          },
+          "ownerLastName": {
+            "type": "string",
+            "example": "Kowalski",
+            "description": "Present when the owner was loaded with the account"
+          }
+        },
+        "required": [
+          "id",
+          "iban",
+          "ownerId",
+          "currency",
+          "balance",
+          "dailyLimit",
+          "dailyUsed",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "AuditLogDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "example": "emp-1"
+          },
+          "userRole": {
+            "type": "string",
+            "example": "EMPLOYEE"
+          },
+          "action": {
+            "type": "string",
+            "example": "EMPLOYEE_CUSTOMER_VIEW"
+          },
+          "resourceId": {
+            "type": "string",
+            "nullable": true,
+            "example": "client-1"
+          },
+          "ipAddress": {
+            "type": "string",
+            "nullable": true,
+            "example": "127.0.0.1"
+          },
+          "reason": {
+            "type": "string",
+            "example": "Employee viewed customer profile"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "userRole",
+          "action",
+          "resourceId",
+          "ipAddress",
+          "reason",
+          "createdAt"
+        ]
+      },
+      "SystemConfigDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "global"
+          },
+          "stepUpThreshold": {
+            "type": "number",
+            "example": 1000,
+            "description": "Transfers of this amount or more need a Passkey step-up"
+          },
+          "minDailyLimit": {
+            "type": "number",
+            "example": 100
+          },
+          "maxDailyLimit": {
+            "type": "number",
+            "example": 50000
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "stepUpThreshold",
+          "minDailyLimit",
+          "maxDailyLimit",
+          "updatedAt"
+        ]
+      },
       "UpdateSystemConfigDto": {
         "type": "object",
         "properties": {
@@ -940,6 +2444,83 @@
             "description": "Maximum allowed daily limit (PLN)"
           }
         }
+      },
+      "TransactionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "operationNumber": {
+            "type": "string",
+            "nullable": true,
+            "example": "OP-1795725463000-1234"
+          },
+          "senderAccountId": {
+            "type": "string",
+            "example": "acc-1"
+          },
+          "receiverAccountId": {
+            "type": "string",
+            "nullable": true,
+            "example": "acc-3"
+          },
+          "receiverIban": {
+            "type": "string",
+            "example": "PL99102010260000140202736451"
+          },
+          "receiverName": {
+            "type": "string",
+            "example": "Anna Nowak"
+          },
+          "amount": {
+            "type": "number",
+            "example": 150.5
+          },
+          "currency": {
+            "type": "string",
+            "example": "PLN"
+          },
+          "title": {
+            "type": "string",
+            "example": "Czynsz"
+          },
+          "status": {
+            "type": "string",
+            "example": "COMPLETED",
+            "description": "DRAFT, PROCESSING, COMPLETED or CANCELLED"
+          },
+          "signature": {
+            "type": "string",
+            "nullable": true,
+            "description": "ECDSA P-256 signature (base64) of the confirmation"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "executedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "operationNumber",
+          "senderAccountId",
+          "receiverAccountId",
+          "receiverIban",
+          "receiverName",
+          "amount",
+          "currency",
+          "title",
+          "status",
+          "signature",
+          "createdAt",
+          "executedAt"
+        ]
       },
       "UpdateLimitDto": {
         "type": "object",
@@ -1007,6 +2588,211 @@
           "title"
         ]
       },
+      "TransferDraftDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT"
+            ],
+            "example": "DRAFT"
+          },
+          "senderAccountId": {
+            "type": "string",
+            "example": "acc-1"
+          },
+          "senderIban": {
+            "type": "string",
+            "example": "PL11102010260000140202736451"
+          },
+          "receiverIban": {
+            "type": "string",
+            "example": "PL99102010260000140202736451"
+          },
+          "receiverName": {
+            "type": "string",
+            "example": "Anna Nowak"
+          },
+          "amount": {
+            "type": "number",
+            "example": 1250
+          },
+          "currency": {
+            "type": "string",
+            "example": "PLN"
+          },
+          "title": {
+            "type": "string",
+            "example": "Czynsz"
+          },
+          "requiresStepUp": {
+            "type": "boolean",
+            "description": "true when the amount reaches the step-up threshold (Passkey, acr=2, fresh auth_time)"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "senderAccountId",
+          "senderIban",
+          "receiverIban",
+          "receiverName",
+          "amount",
+          "currency",
+          "title",
+          "requiresStepUp",
+          "createdAt"
+        ]
+      },
+      "TransferConfirmationPayloadDto": {
+        "type": "object",
+        "properties": {
+          "operationNumber": {
+            "type": "string",
+            "example": "OP-1795725463000-1234"
+          },
+          "senderIban": {
+            "type": "string",
+            "example": "PL11102010260000140202736451"
+          },
+          "receiverIban": {
+            "type": "string",
+            "example": "PL99102010260000140202736451"
+          },
+          "amount": {
+            "type": "number",
+            "example": 1250
+          },
+          "currency": {
+            "type": "string",
+            "example": "PLN"
+          },
+          "executedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "operationNumber",
+          "senderIban",
+          "receiverIban",
+          "amount",
+          "currency",
+          "executedAt"
+        ]
+      },
+      "TransferConfirmedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "COMPLETED"
+            ],
+            "example": "COMPLETED"
+          },
+          "operationNumber": {
+            "type": "string",
+            "nullable": true,
+            "example": "OP-1795725463000-1234"
+          },
+          "executedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "amount": {
+            "type": "number",
+            "example": 1250
+          },
+          "currency": {
+            "type": "string",
+            "example": "PLN"
+          },
+          "signature": {
+            "type": "string",
+            "description": "ECDSA P-256 signature (base64) of confirmationPayload; verify with GET /public/keys"
+          },
+          "confirmationPayload": {
+            "$ref": "#/components/schemas/TransferConfirmationPayloadDto"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "operationNumber",
+          "executedAt",
+          "amount",
+          "currency",
+          "signature",
+          "confirmationPayload"
+        ]
+      },
+      "TransferCancelledDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CANCELLED"
+            ],
+            "example": "CANCELLED"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ]
+      },
+      "RecipientDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ownerId": {
+            "type": "string",
+            "example": "client-1"
+          },
+          "name": {
+            "type": "string",
+            "example": "Anna Nowak (Czynsz)"
+          },
+          "iban": {
+            "type": "string",
+            "example": "PL99102010260000140202736451"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "ownerId",
+          "name",
+          "iban",
+          "createdAt"
+        ]
+      },
       "CreateRecipientDto": {
         "type": "object",
         "properties": {
@@ -1024,6 +2810,212 @@
         "required": [
           "name",
           "iban"
+        ]
+      },
+      "DeletedDto": {
+        "type": "object",
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "example": true
+          },
+          "id": {
+            "type": "string",
+            "example": "6f1c…"
+          }
+        },
+        "required": [
+          "deleted",
+          "id"
+        ]
+      },
+      "PaymentRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "partnerId": {
+            "type": "string",
+            "example": "partner1"
+          },
+          "receiverIban": {
+            "type": "string",
+            "example": "PL99102010260000140202736451"
+          },
+          "receiverName": {
+            "type": "string",
+            "example": "Sklep Partner Sp. z o.o."
+          },
+          "amount": {
+            "type": "number",
+            "example": 149.99
+          },
+          "currency": {
+            "type": "string",
+            "example": "PLN"
+          },
+          "title": {
+            "type": "string",
+            "example": "Zamówienie #1024"
+          },
+          "status": {
+            "type": "string",
+            "example": "PENDING",
+            "description": "PENDING, PROCESSING or PAID"
+          },
+          "transactionId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Transaction id once paid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paidAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "partnerId",
+          "receiverIban",
+          "receiverName",
+          "amount",
+          "currency",
+          "title",
+          "status",
+          "transactionId",
+          "createdAt",
+          "paidAt"
+        ]
+      },
+      "CustomerDetailsDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "client-1"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Jan"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Kowalski"
+          },
+          "email": {
+            "type": "string",
+            "example": "jan.kowalski@example.com"
+          },
+          "customerNumber": {
+            "type": "string",
+            "example": "CUST-1001"
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountDto"
+            }
+          },
+          "transactions": {
+            "description": "Completed transactions of all customer accounts, newest first",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransactionDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "customerNumber",
+          "accounts",
+          "transactions"
+        ]
+      },
+      "CustomerSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "client-1"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "Jan"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Kowalski"
+          },
+          "email": {
+            "type": "string",
+            "example": "jan.kowalski@example.com"
+          },
+          "customerNumber": {
+            "type": "string",
+            "example": "CUST-1001"
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "customerNumber",
+          "accounts"
+        ]
+      },
+      "PasskeyResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Keycloak credential id"
+          },
+          "label": {
+            "type": "string",
+            "example": "Klucz dostępu (Passkey)"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "createdAt"
+        ]
+      },
+      "PartnerTestDto": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Payments endpoint accessible"
+          },
+          "partner": {
+            "type": "string",
+            "example": "partner1"
+          }
+        },
+        "required": [
+          "message"
         ]
       },
       "CreatePaymentRequestDto": {
@@ -1051,6 +3043,77 @@
         "required": [
           "amount",
           "title"
+        ]
+      },
+      "PartnerPaymentRequestCreatedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "partnerId": {
+            "type": "string",
+            "example": "partner1"
+          },
+          "receiverIban": {
+            "type": "string",
+            "example": "PL99102010260000140202736451"
+          },
+          "receiverName": {
+            "type": "string",
+            "example": "Sklep Partner Sp. z o.o."
+          },
+          "amount": {
+            "type": "number",
+            "example": 149.99
+          },
+          "currency": {
+            "type": "string",
+            "example": "PLN"
+          },
+          "title": {
+            "type": "string",
+            "example": "Zamówienie #1024"
+          },
+          "status": {
+            "type": "string",
+            "example": "PENDING",
+            "description": "PENDING, PROCESSING or PAID"
+          },
+          "transactionId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Transaction id once paid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paidAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time"
+          },
+          "deepLink": {
+            "type": "string",
+            "example": "sbank://pay/6f1c…",
+            "description": "Deep link carrying only the request id"
+          }
+        },
+        "required": [
+          "id",
+          "partnerId",
+          "receiverIban",
+          "receiverName",
+          "amount",
+          "currency",
+          "title",
+          "status",
+          "transactionId",
+          "createdAt",
+          "paidAt",
+          "deepLink"
         ]
       }
     }

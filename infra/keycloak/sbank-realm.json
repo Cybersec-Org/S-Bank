@@ -3,7 +3,7 @@
   "enabled": true,
   "displayName": "S-Bank",
   "sslRequired": "external",
-  "registrationAllowed": true,
+  "registrationAllowed": false,
   "registrationEmailAsUsername": true,
   "verifyEmail": false,
   "loginWithEmailAllowed": true,
@@ -15,13 +15,13 @@
   "permanentLockout": false,
   "maxTemporaryLockouts": 0,
   "bruteForceStrategy": "LINEAR",
-  "failureFactor": 10,
+  "failureFactor": 5,
   "waitIncrementSeconds": 60,
   "maxFailureWaitSeconds": 900,
   "maxDeltaTimeSeconds": 43200,
   "quickLoginCheckMilliSeconds": 1000,
   "minimumQuickLoginWaitSeconds": 60,
-  "passwordPolicy": "length(12) and notUsername",
+  "passwordPolicy": "length(12) and notUsername and notEmail and passwordHistory(3)",
   "defaultSignatureAlgorithm": "RS256",
   "accessTokenLifespan": 300,
   "revokeRefreshToken": true,
@@ -81,7 +81,7 @@
         "description": "Roles of every new user: customer",
         "composite": true,
         "composites": {
-          "realm": ["customer", "offline_access"],
+          "realm": ["customer"],
           "client": {
             "account": ["view-profile", "manage-account"]
           }
@@ -150,7 +150,7 @@
     },
     {
       "alias": "sbank-loa-1-password",
-      "description": "LoA 1: Username and password for customers; employee and admin require Passkey",
+      "description": "LoA 1: username and password; customers also TOTP; employee and admin require Passkey",
       "providerId": "basic-flow",
       "topLevel": false,
       "builtIn": false,
@@ -173,6 +173,13 @@
         {
           "authenticatorFlow": true,
           "requirement": "CONDITIONAL",
+          "priority": 25,
+          "flowAlias": "sbank-customer-otp",
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorFlow": true,
+          "requirement": "CONDITIONAL",
           "priority": 30,
           "flowAlias": "sbank-staff-employee-passkey",
           "userSetupAllowed": false
@@ -187,8 +194,32 @@
       ]
     },
     {
+      "alias": "sbank-customer-otp",
+      "description": "Customers: TOTP after the password (CONFIGURE_TOTP on first sign-in)",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-user-role",
+          "authenticatorConfig": "sbank-role-customer-config",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "auth-otp-form",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
       "alias": "sbank-staff-employee-passkey",
-      "description": "Require WebAuthn Passkey when an employee authenticates without Passkey",
+      "description": "Employee who already has a Passkey cannot sign in with a password (deny access); without a Passkey the password only leads to the required actions (UPDATE_PASSWORD, webauthn-register-passwordless). The API requires acr=2 for staff.",
       "providerId": "basic-flow",
       "topLevel": false,
       "builtIn": false,
@@ -210,17 +241,18 @@
           "userSetupAllowed": false
         },
         {
-          "authenticator": "webauthn-authenticator-passwordless",
+          "authenticator": "deny-access-authenticator",
           "authenticatorFlow": false,
           "requirement": "REQUIRED",
           "priority": 30,
-          "userSetupAllowed": true
+          "userSetupAllowed": true,
+          "authenticatorConfig": "sbank-staff-deny-password-employee"
         }
       ]
     },
     {
       "alias": "sbank-staff-admin-passkey",
-      "description": "Require WebAuthn Passkey when an admin authenticates without Passkey",
+      "description": "Admin who already has a Passkey cannot sign in with a password (deny access); without a Passkey the password only leads to the required actions (UPDATE_PASSWORD, webauthn-register-passwordless). The API requires acr=2 for staff.",
       "providerId": "basic-flow",
       "topLevel": false,
       "builtIn": false,
@@ -242,11 +274,12 @@
           "userSetupAllowed": false
         },
         {
-          "authenticator": "webauthn-authenticator-passwordless",
+          "authenticator": "deny-access-authenticator",
           "authenticatorFlow": false,
           "requirement": "REQUIRED",
           "priority": 30,
-          "userSetupAllowed": true
+          "userSetupAllowed": true,
+          "authenticatorConfig": "sbank-staff-deny-password-admin"
         }
       ]
     },
@@ -308,7 +341,26 @@
       "alias": "sbank-has-passkey-config",
       "config": {
         "credentials": "webauthn-passwordless",
-        "included": "false"
+        "included": "true"
+      }
+    },
+    {
+      "alias": "sbank-role-customer-config",
+      "config": {
+        "condUserRole": "customer",
+        "negate": "false"
+      }
+    },
+    {
+      "alias": "sbank-staff-deny-password-employee",
+      "config": {
+        "denyErrorMessage": "Pracownik i administrator logują się kluczem dostępu."
+      }
+    },
+    {
+      "alias": "sbank-staff-deny-password-admin",
+      "config": {
+        "denyErrorMessage": "Pracownik i administrator logują się kluczem dostępu."
       }
     }
   ],
@@ -330,20 +382,11 @@
       "fullScopeAllowed": false,
       "rootUrl": "http://localhost:8081",
       "baseUrl": "/",
-      "redirectUris": [
-        "http://localhost:8081",
-        "http://localhost:8081/*",
-        "https://localhost/*",
-        "sbank://oauth/callback",
-        "sbank://*"
-      ],
-      "webOrigins": [
-        "http://localhost:8081",
-        "https://localhost"
-      ],
+      "redirectUris": ["sbank://oauth/callback", "http://localhost:8081/oauth/callback"],
+      "webOrigins": ["http://localhost:8081"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:8081/*##https://localhost/*##http://localhost:8081##sbank://*",
+        "post.logout.redirect.uris": "sbank://oauth/callback##http://localhost:8081/oauth/callback",
         "oauth2.device.authorization.grant.enabled": "false",
         "oidc.ciba.grant.enabled": "false",
         "standard.token.exchange.enabled": "false",
@@ -395,6 +438,82 @@
       },
       "defaultClientScopes": [],
       "optionalClientScopes": []
+    }
+  ],
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyDigits": 6,
+  "otpPolicyPeriod": 30,
+  "otpPolicyLookAheadWindow": 1,
+  "otpPolicyCodeReusable": false,
+  "users": [
+    {
+      "id": "c8df368e-a7d3-45d7-a5d6-f1e9ab242ab6",
+      "username": "jan.kowalski@example.com",
+      "enabled": true,
+      "firstName": "Jan",
+      "lastName": "Kowalski",
+      "email": "jan.kowalski@example.com",
+      "emailVerified": true,
+      "realmRoles": ["customer"],
+      "clientRoles": {
+        "account": ["view-profile", "manage-account"]
+      },
+      "requiredActions": ["UPDATE_PASSWORD", "CONFIGURE_TOTP"]
+    },
+    {
+      "id": "5b0f6a1e-3c2d-4e8f-9a7b-2d4c6e8f0a12",
+      "username": "anna.nowak@example.com",
+      "enabled": true,
+      "firstName": "Anna",
+      "lastName": "Nowak",
+      "email": "anna.nowak@example.com",
+      "emailVerified": true,
+      "realmRoles": ["customer"],
+      "clientRoles": {
+        "account": ["view-profile", "manage-account"]
+      },
+      "requiredActions": ["UPDATE_PASSWORD", "CONFIGURE_TOTP"]
+    },
+    {
+      "id": "9e3a7c51-8b24-4f6d-a0e1-7c5b3d9f2e48",
+      "username": "piotr.niepowiazany",
+      "enabled": true,
+      "firstName": "Piotr",
+      "lastName": "Niepowiązany",
+      "realmRoles": ["customer"],
+      "clientRoles": {
+        "account": ["view-profile", "manage-account"]
+      },
+      "requiredActions": ["UPDATE_PASSWORD", "CONFIGURE_TOTP"]
+    },
+    {
+      "id": "2f8d4b6a-1e3c-4a5b-8d7f-6c9e0a2b4d13",
+      "username": "katarzyna.zielinska@sbank.local",
+      "enabled": true,
+      "firstName": "Katarzyna",
+      "lastName": "Zielińska",
+      "email": "katarzyna.zielinska@sbank.local",
+      "emailVerified": true,
+      "realmRoles": ["employee"],
+      "clientRoles": {
+        "account": ["view-profile", "manage-account"]
+      },
+      "requiredActions": ["UPDATE_PASSWORD", "webauthn-register-passwordless"]
+    },
+    {
+      "id": "7a1c3e5b-9d2f-4b6a-8c0e-3f5a7b9d1c24",
+      "username": "admin@sbank.local",
+      "enabled": true,
+      "firstName": "Administrator",
+      "lastName": "S-Bank",
+      "email": "admin@sbank.local",
+      "emailVerified": true,
+      "realmRoles": ["admin"],
+      "clientRoles": {
+        "account": ["view-profile", "manage-account"]
+      },
+      "requiredActions": ["UPDATE_PASSWORD", "webauthn-register-passwordless"]
     }
   ]
 }

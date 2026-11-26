@@ -4,15 +4,527 @@
  */
 
 export interface paths {
-  '/api/me': {
+  '/health': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Who the API thinks the caller is. */
-    get: operations['getCurrentUser'];
+    /** Checks server health */
+    get: operations['HealthController_check'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/public/rates': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get current NBP exchange rates table */
+    get: operations['PublicController_getRates'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/public/convert': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Convert amount between any supported currencies */
+    get: operations['PublicController_convertCurrency'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/public/atms': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get ATM locations for map display and local GPS sorting (OpenStreetMap Overpass API) */
+    get: operations['PublicController_getAtms'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/public/terms': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get static HTML terms and conditions for secure WebView */
+    get: operations['PublicController_getTerms'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/public/keys': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get bank public key (PEM) for verifying transfer confirmations */
+    get: operations['PublicController_getPublicKeys'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/public/verify-confirmation': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Verify cryptographic signature of a transfer confirmation */
+    post: operations['PublicController_verifyConfirmation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get list of accounts (includes dailyUsed and auto-provisions OIDC demo account) */
+    get: operations['AccountsController_findAll'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/audit-logs': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get security audit logs (Admin only) */
+    get: operations['AccountsController_getAuditLogs'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/admin/config': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get global security parameters (Admin only) */
+    get: operations['AccountsController_getSystemConfig'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update global step-up threshold and daily limit range (Admin only) */
+    patch: operations['AccountsController_updateSystemConfig'];
+    trace?: never;
+  };
+  '/accounts/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get account details with BOLA protection */
+    get: operations['AccountsController_findOne'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{id}/transactions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get account transaction history */
+    get: operations['AccountsController_getTransactions'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/accounts/{id}/limit': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update account daily limit (Employee or Admin only) */
+    patch: operations['AccountsController_updateLimit'];
+    trace?: never;
+  };
+  '/accounts/{id}/status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Freeze or unfreeze account (Employee/Admin only) */
+    patch: operations['AccountsController_updateStatus'];
+    trace?: never;
+  };
+  '/transfers': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Step 1: Create transfer draft and return summary */
+    post: operations['AccountsController_createTransferDraft'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/transfers/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get transfer draft details with BOLA protection */
+    get: operations['AccountsController_getTransferDraft'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/transfers/{id}/confirm': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Step 2: Confirm, execute and sign transfer */
+    post: operations['AccountsController_confirmTransfer'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/transfers/{id}/cancel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Step 2 (Alternative): Cancel transfer draft */
+    post: operations['AccountsController_cancelTransfer'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/recipients': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get logged-in client saved recipients */
+    get: operations['AccountsController_getRecipients'];
+    put?: never;
+    /** Add a new saved recipient */
+    post: operations['AccountsController_createRecipient'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/recipients/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete saved recipient (BOLA 404 protected) */
+    delete: operations['AccountsController_deleteRecipient'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/payment-requests/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get payment request details for QR code or deep link sbank://pay/{id} */
+    get: operations['AccountsController_getPaymentRequest'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/payment-requests/{id}/pay': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Confirm and pay a QR / deep link payment request */
+    post: operations['AccountsController_payPaymentRequest'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/customers/me': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get logged-in customer profile (for client dashboard) */
+    get: operations['AccountsController_getMyProfile'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/customers': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Search customers for employees (GET /customers?query=) */
+    get: operations['AccountsController_searchCustomers'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/customers/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get customer details along with accounts and history */
+    get: operations['AccountsController_getCustomer'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/auth/passkeys': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List registered WebAuthn Passkeys for the authenticated user */
+    get: operations['PasskeysController_listPasskeys'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/auth/passkeys/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete a registered WebAuthn Passkey belonging to the authenticated user */
+    delete: operations['PasskeysController_removePasskey'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/payments/test': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Test endpoint for partner payments:read permission */
+    get: operations['PartnersController_getPayments'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/reports/test': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Test endpoint for partner reports:read permission */
+    get: operations['PartnersController_getReports'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/payment-requests': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create a payment request for QR code / deep link sbank://pay/{id} */
+    post: operations['PartnersController_createPaymentRequest'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/payment-requests/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get status of own payment request (BOLA 404 protected between partners) */
+    get: operations['PartnersController_getPaymentRequest'];
     put?: never;
     post?: never;
     delete?: never;
@@ -25,49 +537,526 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
-    MeResponseDto: {
-      /** @description Authentication context class of the session: `2` after a passkey login. */
-      acr: string | null;
-      /** @description Roles from the verified token. */
-      roles: ('customer' | 'employee' | 'admin' | 'partner')[];
-      /** @description Keycloak subject (`sub`) of the caller. */
-      subject: string;
+    HealthDto: {
+      /** @example ok */
+      status: string;
+      /** Format: date-time */
+      timestamp: string;
     };
-    ProblemDetailsDto: {
-      /** @description Safe, human-readable explanation. Never internal details. */
-      detail?: string;
-      /** @description Validation failures (400): which request properties were rejected. */
-      errors?: string[];
+    ExchangeRateDto: {
+      /** @example Euro */
+      currency: string;
+      /** @example EUR */
+      code: string;
       /**
-       * @description Step-up required (403): maximum age of the authentication, in seconds.
-       * @example 300
+       * @description NBP table A mid rate in PLN
+       * @example 4.2645
        */
-      maxAgeSeconds?: number;
+      mid: number;
+    };
+    RatesDto: {
       /**
-       * @description Step-up required (403): authentication context class the token must carry.
-       * @example 2
+       * @description nbp_api, cache or stale_cache
+       * @example nbp_api
        */
-      requiredAcr?: string;
+      source: string;
+      /** @example 2026-11-26 */
+      effectiveDate: string;
+      rates: components['schemas']['ExchangeRateDto'][];
+    };
+    ConversionDto: {
+      /** @example 100 */
+      amount: number;
+      /** @example PLN */
+      fromCurrency: string;
+      /** @example EUR */
+      toCurrency: string;
+      /** @example 23.45 */
+      convertedAmount: number;
+      /** @example 0.2345 */
+      exchangeRate: number;
+      /** @example 2026-11-26 */
+      effectiveDate: string;
+    };
+    ErrorResponseDto: {
       /**
-       * @description HTTP status code.
-       * @example 403
+       * @description Machine-readable error code, e.g. STEP_UP_REQUIRED, PASSKEY_REQUIRED, FORBIDDEN, ACCOUNT_NOT_FOUND, TRANSFER_NOT_FOUND, RECIPIENT_NOT_FOUND, INSUFFICIENT_FUNDS, DAILY_LIMIT_EXCEEDED, ACCOUNT_BLOCKED, CURRENCY_MISMATCH, SAME_ACCOUNT_TRANSFER, LIMIT_OUT_OF_RANGE, PAYMENT_REQUEST_NOT_FOUND, PASSKEY_NOT_FOUND
+       * @example STEP_UP_REQUIRED
        */
-      status: number;
+      code?: string;
+      /** @description Human-readable explanation (a list of messages for validation errors). Not for display. */
+      message: string | string[];
       /**
-       * @description Short, fixed summary of the problem type.
-       * @example Forbidden
+       * @description HTTP status (Nest default error format only)
+       * @example 401
        */
+      statusCode?: number;
+      /**
+       * @description HTTP reason phrase (Nest default error format only)
+       * @example Unauthorized
+       */
+      error?: string;
+    };
+    AtmDto: {
+      /** @example atm-ktw-1 */
+      id: string;
+      /** @example S-Bankomat Galeria Katowicka */
+      name: string;
+      /** @example S-Bank */
+      operator: string;
+      /** @example Katowice */
+      city: string;
+      /** @example 3 Maja 30 */
+      street: string;
+      /** @example 50.2599 */
+      lat: number;
+      /** @example 19.0216 */
+      lng: number;
+      /** @example true */
+      cashAvailable: boolean;
+    };
+    AtmsDto: {
+      /**
+       * @description sbank_directory, osm_cache, osm_nominatim_api or fallback
+       * @example osm_nominatim_api
+       */
+      source: string;
+      /**
+       * @description Resolved city, ALL when no city was given
+       * @example Katowice
+       */
+      city: string;
+      atms: components['schemas']['AtmDto'][];
+    };
+    TermsDto: {
+      /** @example 2026.11 */
+      version: string;
+      /** @example 2026-11-17 */
+      updatedAt: string;
+      /** @description Static HTML document; render in a sandbox without JavaScript */
+      html: string;
+    };
+    PublicKeyDto: {
+      /** @example sbank-transfer-signing-2026 */
+      keyId: string;
+      /** @example ECDSA_P256_SHA256 */
+      algorithm: string;
+      /**
+       * @description SoftHSM2-PKCS11 or Software-HSM-Fallback
+       * @example Software-HSM-Fallback
+       */
+      provider: string;
+      /** @description SPKI public key in PEM format */
+      publicKeyPem: string;
+    };
+    VerifyConfirmationPayloadDto: {
+      /** @example OP-1795725463000-1234 */
+      operationNumber: string;
+      /** @example PL11102010260000140202736451 */
+      senderIban: string;
+      /** @example PL99102010260000140202736451 */
+      receiverIban: string;
+      /** @example 1250 */
+      amount: number;
+      /** @example PLN */
+      currency: string;
+      /** Format: date-time */
+      executedAt: string;
+    };
+    VerifyConfirmationRequestDto: {
+      payload: components['schemas']['VerifyConfirmationPayloadDto'];
+      /** @description Base64 signature from the transfer confirmation */
+      signature: string;
+    };
+    VerifyConfirmationResultDto: {
+      /** @example true */
+      valid: boolean;
+    };
+    AccountDto: {
+      /** @example acc-1 */
+      id: string;
+      /** @example PL11102010260000140202736451 */
+      iban: string;
+      /**
+       * @description Customer id of the owner
+       * @example client-1
+       */
+      ownerId: string;
+      /** @example PLN */
+      currency: string;
+      /**
+       * @description Balance in the account currency
+       * @example 12500
+       */
+      balance: number;
+      /**
+       * @description Daily outgoing limit
+       * @example 5000
+       */
+      dailyLimit: number;
+      /**
+       * @description Sum of completed outgoing transfers since local midnight
+       * @example 150.5
+       */
+      dailyUsed: number;
+      /**
+       * @example ACTIVE
+       * @enum {string}
+       */
+      status: 'ACTIVE' | 'FROZEN' | 'CLOSED';
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      /**
+       * @description Present when the owner was loaded with the account
+       * @example Jan
+       */
+      ownerFirstName?: string;
+      /**
+       * @description Present when the owner was loaded with the account
+       * @example Kowalski
+       */
+      ownerLastName?: string;
+    };
+    AuditLogDto: {
+      /** Format: uuid */
+      id: string;
+      /** @example emp-1 */
+      userId: string;
+      /** @example EMPLOYEE */
+      userRole: string;
+      /** @example EMPLOYEE_CUSTOMER_VIEW */
+      action: string;
+      /** @example client-1 */
+      resourceId: string | null;
+      /** @example 127.0.0.1 */
+      ipAddress: string | null;
+      /** @example Employee viewed customer profile */
+      reason: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    SystemConfigDto: {
+      /** @example global */
+      id: string;
+      /**
+       * @description Transfers of this amount or more need a Passkey step-up
+       * @example 1000
+       */
+      stepUpThreshold: number;
+      /** @example 100 */
+      minDailyLimit: number;
+      /** @example 50000 */
+      maxDailyLimit: number;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    UpdateSystemConfigDto: {
+      /**
+       * @description Minimum transfer amount requiring Passkey step-up (PLN)
+       * @example 1000
+       */
+      stepUpThreshold?: number;
+      /**
+       * @description Minimum allowed daily limit (PLN)
+       * @example 100
+       */
+      minDailyLimit?: number;
+      /**
+       * @description Maximum allowed daily limit (PLN)
+       * @example 50000
+       */
+      maxDailyLimit?: number;
+    };
+    TransactionDto: {
+      /** Format: uuid */
+      id: string;
+      /** @example OP-1795725463000-1234 */
+      operationNumber: string | null;
+      /** @example acc-1 */
+      senderAccountId: string;
+      /** @example acc-3 */
+      receiverAccountId: string | null;
+      /** @example PL99102010260000140202736451 */
+      receiverIban: string;
+      /** @example Anna Nowak */
+      receiverName: string;
+      /** @example 150.5 */
+      amount: number;
+      /** @example PLN */
+      currency: string;
+      /** @example Czynsz */
       title: string;
       /**
-       * @description Request id (also in the `x-request-id` response header) for support and log lookup.
-       * @example 3f1c2a4e-8b0d-4d57-9a53-0f5f1f6f8f21
+       * @description DRAFT, PROCESSING, COMPLETED or CANCELLED
+       * @example COMPLETED
        */
-      traceId: string;
+      status: string;
+      /** @description ECDSA P-256 signature (base64) of the confirmation */
+      signature: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      executedAt: string | null;
+    };
+    UpdateLimitDto: {
       /**
-       * @description Relative URI identifying the problem type.
-       * @example /problems/forbidden
+       * @description New daily limit in allowed range (100 - 50 000 PLN)
+       * @example 5000
        */
-      type: string;
+      newLimit: number;
+    };
+    UpdateStatusDto: {
+      /**
+       * @example FROZEN
+       * @enum {string}
+       */
+      status: 'ACTIVE' | 'FROZEN' | 'CLOSED';
+    };
+    CreateTransactionDto: {
+      /**
+       * @description Sender Account ID (optional, defaults to primary PLN account)
+       * @example uuid-sender-account
+       */
+      senderAccountId?: string;
+      /**
+       * @description Receiver IBAN (PL + 26 digits)
+       * @example PL99102010260000140202736451
+       */
+      receiverIban: string;
+      /**
+       * @description Receiver Name
+       * @example Anna Nowak
+       */
+      receiverName: string;
+      /**
+       * @description Amount to transfer (max 2 decimal places)
+       * @example 150.5
+       */
+      amount: number;
+      /**
+       * @description Transaction title
+       * @example Dinner payment
+       */
+      title: string;
+    };
+    TransferDraftDto: {
+      /** Format: uuid */
+      id: string;
+      /**
+       * @example DRAFT
+       * @enum {string}
+       */
+      status: 'DRAFT';
+      /** @example acc-1 */
+      senderAccountId: string;
+      /** @example PL11102010260000140202736451 */
+      senderIban: string;
+      /** @example PL99102010260000140202736451 */
+      receiverIban: string;
+      /** @example Anna Nowak */
+      receiverName: string;
+      /** @example 1250 */
+      amount: number;
+      /** @example PLN */
+      currency: string;
+      /** @example Czynsz */
+      title: string;
+      /** @description true when the amount reaches the step-up threshold (Passkey, acr=2, fresh auth_time) */
+      requiresStepUp: boolean;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    TransferConfirmationPayloadDto: {
+      /** @example OP-1795725463000-1234 */
+      operationNumber: string;
+      /** @example PL11102010260000140202736451 */
+      senderIban: string;
+      /** @example PL99102010260000140202736451 */
+      receiverIban: string;
+      /** @example 1250 */
+      amount: number;
+      /** @example PLN */
+      currency: string;
+      /** Format: date-time */
+      executedAt: string;
+    };
+    TransferConfirmedDto: {
+      /** Format: uuid */
+      id: string;
+      /**
+       * @example COMPLETED
+       * @enum {string}
+       */
+      status: 'COMPLETED';
+      /** @example OP-1795725463000-1234 */
+      operationNumber: string | null;
+      /** Format: date-time */
+      executedAt: string | null;
+      /** @example 1250 */
+      amount: number;
+      /** @example PLN */
+      currency: string;
+      /** @description ECDSA P-256 signature (base64) of confirmationPayload; verify with GET /public/keys */
+      signature: string;
+      confirmationPayload: components['schemas']['TransferConfirmationPayloadDto'];
+    };
+    TransferCancelledDto: {
+      /** Format: uuid */
+      id: string;
+      /**
+       * @example CANCELLED
+       * @enum {string}
+       */
+      status: 'CANCELLED';
+    };
+    RecipientDto: {
+      /** Format: uuid */
+      id: string;
+      /** @example client-1 */
+      ownerId: string;
+      /** @example Anna Nowak (Czynsz) */
+      name: string;
+      /** @example PL99102010260000140202736451 */
+      iban: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    CreateRecipientDto: {
+      /**
+       * @description Saved recipient display name
+       * @example Anna Nowak (Czynsz)
+       */
+      name: string;
+      /**
+       * @description Recipient Polish IBAN
+       * @example PL99102010260000140202736451
+       */
+      iban: string;
+    };
+    DeletedDto: {
+      /** @example true */
+      deleted: boolean;
+      /** @example 6f1c… */
+      id: string;
+    };
+    PaymentRequestDto: {
+      /** Format: uuid */
+      id: string;
+      /** @example partner1 */
+      partnerId: string;
+      /** @example PL99102010260000140202736451 */
+      receiverIban: string;
+      /** @example Sklep Partner Sp. z o.o. */
+      receiverName: string;
+      /** @example 149.99 */
+      amount: number;
+      /** @example PLN */
+      currency: string;
+      /** @example Zamówienie #1024 */
+      title: string;
+      /**
+       * @description PENDING, PROCESSING or PAID
+       * @example PENDING
+       */
+      status: string;
+      /** @description Transaction id once paid */
+      transactionId: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      paidAt: string | null;
+    };
+    CustomerDetailsDto: {
+      /** @example client-1 */
+      id: string;
+      /** @example Jan */
+      firstName: string;
+      /** @example Kowalski */
+      lastName: string;
+      /** @example jan.kowalski@example.com */
+      email: string;
+      /** @example CUST-1001 */
+      customerNumber: string;
+      accounts: components['schemas']['AccountDto'][];
+      /** @description Completed transactions of all customer accounts, newest first */
+      transactions: components['schemas']['TransactionDto'][];
+    };
+    CustomerSummaryDto: {
+      /** @example client-1 */
+      id: string;
+      /** @example Jan */
+      firstName: string;
+      /** @example Kowalski */
+      lastName: string;
+      /** @example jan.kowalski@example.com */
+      email: string;
+      /** @example CUST-1001 */
+      customerNumber: string;
+      accounts: components['schemas']['AccountDto'][];
+    };
+    PasskeyResponseDto: {
+      /** @description Keycloak credential id */
+      id: string;
+      /** @example Klucz dostępu (Passkey) */
+      label: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    PartnerTestDto: {
+      /** @example Payments endpoint accessible */
+      message: string;
+      /** @example partner1 */
+      partner?: string;
+    };
+    CreatePaymentRequestDto: {
+      /**
+       * @description Requested payment amount
+       * @example 149.99
+       */
+      amount: number;
+      /**
+       * @description Payment title
+       * @example Zamówienie #1024 w sklepie Partner
+       */
+      title: string;
+      /** @example PL99102010260000140202736451 */
+      receiverIban?: string;
+      /** @example Sklep Partner Sp. z o.o. */
+      receiverName?: string;
+    };
+    PartnerPaymentRequestCreatedDto: {
+      /** Format: uuid */
+      id: string;
+      /** @example partner1 */
+      partnerId: string;
+      /** @example PL99102010260000140202736451 */
+      receiverIban: string;
+      /** @example Sklep Partner Sp. z o.o. */
+      receiverName: string;
+      /** @example 149.99 */
+      amount: number;
+      /** @example PLN */
+      currency: string;
+      /** @example Zamówienie #1024 */
+      title: string;
+      /**
+       * @description PENDING, PROCESSING or PAID
+       * @example PENDING
+       */
+      status: string;
+      /** @description Transaction id once paid */
+      transactionId: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      paidAt: string | null;
+      /**
+       * @description Deep link carrying only the request id
+       * @example sbank://pay/6f1c…
+       */
+      deepLink: string;
     };
   };
   responses: never;
@@ -78,7 +1067,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  getCurrentUser: {
+  HealthController_check: {
     parameters: {
       query?: never;
       header?: never;
@@ -87,40 +1076,1389 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description The verified caller. */
       200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['MeResponseDto'];
+          'application/json': components['schemas']['HealthDto'];
         };
       };
-      /** @description Missing, invalid or expired access token. */
+    };
+  };
+  PublicController_getRates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RatesDto'];
+        };
+      };
+    };
+  };
+  PublicController_convertCurrency: {
+    parameters: {
+      query: {
+        amount: string;
+        from?: string;
+        to?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ConversionDto'];
+        };
+      };
+      /** @description Invalid amount or unsupported currency */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  PublicController_getAtms: {
+    parameters: {
+      query?: {
+        /** @description Optional city name (e.g. Katowice, Dąbrowa Górnicza, Gliwice, Warszawa, Kraków) */
+        city?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AtmsDto'];
+        };
+      };
+    };
+  };
+  PublicController_getTerms: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TermsDto'];
+        };
+      };
+    };
+  };
+  PublicController_getPublicKeys: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PublicKeyDto'];
+        };
+      };
+    };
+  };
+  PublicController_verifyConfirmation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['VerifyConfirmationRequestDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['VerifyConfirmationResultDto'];
+        };
+      };
+      /** @description payload or signature missing */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_findAll: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AccountDto'][];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
       401: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/problem+json': components['schemas']['ProblemDetailsDto'];
+          'application/json': components['schemas']['ErrorResponseDto'];
         };
       };
-      /** @description Role not allowed, or step-up authentication required. */
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
       403: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/problem+json': components['schemas']['ProblemDetailsDto'];
+          'application/json': components['schemas']['ErrorResponseDto'];
         };
       };
-      /** @description Too many requests. */
-      429: {
+    };
+  };
+  AccountsController_getAuditLogs: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/problem+json': components['schemas']['ProblemDetailsDto'];
+          'application/json': components['schemas']['AuditLogDto'][];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_getSystemConfig: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SystemConfigDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_updateSystemConfig: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateSystemConfigDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['SystemConfigDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_findOne: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AccountDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description ACCOUNT_NOT_FOUND (also for accounts of other customers) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_getTransactions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Completed transactions, newest first */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TransactionDto'][];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description ACCOUNT_NOT_FOUND */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_updateLimit: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateLimitDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AccountDto'];
+        };
+      };
+      /** @description LIMIT_OUT_OF_RANGE or validation error */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description ACCOUNT_NOT_FOUND */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_updateStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateStatusDto'];
+      };
+    };
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AccountDto'];
+        };
+      };
+      /** @description Validation error */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description ACCOUNT_NOT_FOUND */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_createTransferDraft: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateTransactionDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TransferDraftDto'];
+        };
+      };
+      /** @description SAME_ACCOUNT_TRANSFER, CURRENCY_MISMATCH or validation error */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description ACCOUNT_NOT_FOUND or RECIPIENT_NOT_FOUND */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description INSUFFICIENT_FUNDS or DAILY_LIMIT_EXCEEDED */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_getTransferDraft: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TransferDraftDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description TRANSFER_NOT_FOUND */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_confirmTransfer: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TransferConfirmedDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description TRANSFER_NOT_FOUND */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description INSUFFICIENT_FUNDS or DAILY_LIMIT_EXCEEDED */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_cancelTransfer: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TransferCancelledDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description TRANSFER_NOT_FOUND */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_getRecipients: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RecipientDto'][];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_createRecipient: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateRecipientDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RecipientDto'];
+        };
+      };
+      /** @description Validation error */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_deleteRecipient: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DeletedDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description RECIPIENT_NOT_FOUND */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_getPaymentRequest: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PaymentRequestDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description PAYMENT_REQUEST_NOT_FOUND */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_payPaymentRequest: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TransferConfirmedDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description PAYMENT_REQUEST_NOT_FOUND */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description INSUFFICIENT_FUNDS or DAILY_LIMIT_EXCEEDED */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_getMyProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CustomerDetailsDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_searchCustomers: {
+    parameters: {
+      query?: {
+        /** @description Search by first name, last name, email or customer number */
+        query?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CustomerSummaryDto'][];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  AccountsController_getCustomer: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CustomerDetailsDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token, or a CLIENT not linked to a customer */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Role not allowed (FORBIDDEN), staff without Passkey (PASSKEY_REQUIRED) or step-up missing (STEP_UP_REQUIRED) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description CUSTOMER_NOT_FOUND */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  PasskeysController_listPasskeys: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PasskeyResponseDto'][];
+        };
+      };
+      /** @description Missing, invalid or expired token */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description PASSKEY_REQUIRED (staff without acr=2, or removing the last staff Passkey) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  PasskeysController_removePasskey: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['DeletedDto'];
+        };
+      };
+      /** @description Missing, invalid or expired token */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description PASSKEY_REQUIRED (staff without acr=2, or removing the last staff Passkey) */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description PASSKEY_NOT_FOUND */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  PartnersController_getPayments: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Optional mTLS certificate thumbprint (RFC 8705) */
+        'x-client-cert-sha256'?: string;
+        /** @description Partner ID (partner1, partner2) */
+        'x-partner-id': string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PartnerTestDto'];
+        };
+      };
+      /** @description Request did not come through Caddy mTLS or the partner is unknown */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Partner lacks the required permission */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  PartnersController_getReports: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Optional mTLS certificate thumbprint (RFC 8705) */
+        'x-client-cert-sha256'?: string;
+        /** @description Partner ID (partner1, partner2) */
+        'x-partner-id': string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PartnerTestDto'];
+        };
+      };
+      /** @description Request did not come through Caddy mTLS or the partner is unknown */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Partner lacks the required permission */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  PartnersController_createPaymentRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Optional mTLS certificate thumbprint (RFC 8705) */
+        'x-client-cert-sha256'?: string;
+        /** @description Partner ID (partner1, partner2) */
+        'x-partner-id': string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreatePaymentRequestDto'];
+      };
+    };
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PartnerPaymentRequestCreatedDto'];
+        };
+      };
+      /** @description Validation error */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Request did not come through Caddy mTLS or the partner is unknown */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Partner lacks the required permission */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  PartnersController_getPaymentRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Optional mTLS certificate thumbprint (RFC 8705) */
+        'x-client-cert-sha256'?: string;
+        /** @description Partner ID (partner1, partner2) */
+        'x-partner-id': string;
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PaymentRequestDto'];
+        };
+      };
+      /** @description Request did not come through Caddy mTLS or the partner is unknown */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Partner lacks the required permission */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description PAYMENT_REQUEST_NOT_FOUND (also for requests of other partners) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
         };
       };
     };
