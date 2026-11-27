@@ -1,3 +1,5 @@
+import { BiometricCancelled } from './biometric-errors';
+import { biometricVault, type BiometricVault, type VaultKey } from './biometric-vault';
 import { MOCK_PRINCIPALS } from './mock-principals';
 import {
   accessTokenExpiresAt,
@@ -33,6 +35,8 @@ export type SignOutReason = 'session_expired' | 'access_rejected';
 
 export type SessionState =
   | { readonly status: 'signedOut'; readonly reason?: SignOutReason | undefined }
+  /** Phone: a biometric-protected refresh token is stored (P-18); nothing is in memory until the user unlocks. */
+  | { readonly status: 'locked' }
   | {
       readonly status: 'signedIn';
       readonly principal: Principal;
@@ -63,7 +67,22 @@ export interface SessionStore {
    */
   refresh: () => Promise<boolean>;
   signOut: (reason?: SignOutReason) => void;
+  /** Phone (P-18): a stored session exists – show "Unlock with biometrics" instead of the sign-in buttons. */
+  lock: () => void;
+  /** Phone (P-18): biometric prompt → stored refresh token → refresh grant → signed in. */
+  unlockWithBiometrics: () => Promise<UnlockResult>;
+  /** Phone (P-18): keep this session's refresh token behind biometrics (Android shows one prompt). */
+  enableBiometrics: () => Promise<boolean>;
+  /** Removes the stored session and the preference. */
+  disableBiometrics: () => Promise<void>;
 }
+
+/**
+ * `unlocked` – signed in; `cancelled` – prompt cancelled, still locked; `unavailable` – stored session unusable
+ * (biometrics changed, entries missing) and removed; `session_expired` – Keycloak refused the stored token, removed;
+ * `failed` – no answer from Keycloak, still locked.
+ */
+export type UnlockResult = 'unlocked' | 'cancelled' | 'unavailable' | 'session_expired' | 'failed';
 
 interface SessionStoreOptions {
   readonly mockEnabled: boolean;
@@ -73,6 +92,8 @@ interface SessionStoreOptions {
   readonly now?: () => number;
   /** Refresh-token grant; tests inject a fake. */
   readonly refreshTokens?: (refreshToken: string) => Promise<OidcTokens>;
+  /** Biometric storage of the refresh token (P-18); tests inject a fake. */
+  readonly vault?: BiometricVault;
 }
 
 const STEP_UP_LEVEL: AssuranceLevel = '2';
@@ -82,9 +103,12 @@ export function createSessionStore({
   principals = MOCK_PRINCIPALS,
   now = Date.now,
   refreshTokens = refreshTokensWithKeycloak,
+  vault = biometricVault,
 }: SessionStoreOptions): SessionStore {
   let state: SessionState = { status: 'signedOut' };
   let refreshing: Promise<boolean> | null = null;
+  /** P-18: the biometric key of this session (after enabling or unlocking); in memory only. */
+  let vaultKey: VaultKey | null = null;
   const listeners = new Set<Listener>();
 
   function setState(next: SessionState): void {
@@ -102,13 +126,71 @@ export function createSessionStore({
       refreshToken: tokens.refreshToken,
       expiresAt: accessTokenExpiresAt(tokens.accessToken),
     });
+    // P-18: every rotated refresh token replaces the sealed copy (no prompt), so the stored one is never stale.
+    if (vaultKey !== null && tokens.refreshToken !== undefined) {
+      void vault.seal(vaultKey, tokens.refreshToken).catch(() => undefined);
+    }
   }
 
   function signOut(reason?: SignOutReason): void {
     if (!mockEnabled) {
+      vaultKey = null;
       void clearPersistedRefreshToken().catch(() => undefined);
+      void vault.clear().catch(() => undefined);
     }
     setState(reason === undefined ? { status: 'signedOut' } : { status: 'signedOut', reason });
+  }
+
+  async function unlockWithBiometrics(): Promise<UnlockResult> {
+    if (state.status !== 'locked') {
+      return state.status === 'signedIn' ? 'unlocked' : 'unavailable';
+    }
+    let opened;
+    try {
+      opened = await vault.unlock();
+    } catch (error) {
+      return error instanceof BiometricCancelled ? 'cancelled' : 'failed';
+    }
+    if (opened === null) {
+      await vault.clear().catch(() => undefined);
+      setState({ status: 'signedOut' });
+      return 'unavailable';
+    }
+    let tokens: OidcTokens;
+    try {
+      tokens = await refreshTokens(opened.refreshToken);
+    } catch (error) {
+      if (error instanceof OidcAuthError && error.code === 'session_expired') {
+        signOut('session_expired');
+        return 'session_expired';
+      }
+      return 'failed';
+    }
+    if (state.status !== 'locked') {
+      return 'failed';
+    }
+    vaultKey = opened.key;
+    setOidcSession(tokens);
+    return 'unlocked';
+  }
+
+  async function enableBiometrics(): Promise<boolean> {
+    if (mockEnabled || state.status !== 'signedIn' || state.refreshToken === undefined) {
+      return false;
+    }
+    try {
+      vaultKey = await vault.enable(state.refreshToken);
+      return true;
+    } catch {
+      vaultKey = null;
+      await vault.clear().catch(() => undefined);
+      return false;
+    }
+  }
+
+  async function disableBiometrics(): Promise<void> {
+    vaultKey = null;
+    await vault.clear();
   }
 
   async function runRefresh(): Promise<boolean> {
@@ -172,5 +254,15 @@ export function createSessionStore({
       return refreshing;
     },
     signOut,
+    lock: () => {
+      if (!mockEnabled && state.status !== 'locked') {
+        // Tokens and the biometric key leave memory; the sealed refresh token stays for the next unlock.
+        vaultKey = null;
+        setState({ status: 'locked' });
+      }
+    },
+    unlockWithBiometrics,
+    enableBiometrics,
+    disableBiometrics,
   };
 }

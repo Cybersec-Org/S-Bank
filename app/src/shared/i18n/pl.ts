@@ -108,6 +108,11 @@ export const pl = {
     sessionDivider: 'masz już sesję na tym urządzeniu?',
     unlockBiometrics: 'Odblokuj biometrią',
     unlockBiometricsSoon: 'Odblokowanie biometrią będzie dostępne w jednym z kolejnych etapów.',
+    unlockCancelled: 'Odblokowanie anulowane. Spróbuj ponownie albo zaloguj się.',
+    unlockUnavailable:
+      'Zapisana sesja nie jest już dostępna (np. zmieniono biometrię w telefonie). Zaloguj się ponownie.',
+    unlockFailed: 'Nie udało się połączyć z bankiem. Spróbuj ponownie.',
+    unlockOtherwiseHint: 'Zalogowanie się w inny sposób usunie zapisaną sesję z tego telefonu.',
     devHeading: 'Tryb deweloperski',
     devToggle: 'Pokaż logowanie deweloperskie',
     devEmployee: 'Zaloguj jako pracownik',
@@ -347,11 +352,21 @@ export const pl = {
     notFoundTitle: 'Nie znaleziono żądania',
     notFoundMessage: 'Żądanie płatności nie istnieje, wygasło lub należy do kogoś innego.',
   },
+  biometricsOffer: {
+    title: 'Odblokowanie biometrią',
+    message:
+      'Czy chcesz następnym razem otwierać aplikację odciskiem palca lub twarzą, bez logowania? Sesja zostanie zapisana tylko na tym telefonie.',
+    enable: 'Włącz',
+    later: 'Nie teraz',
+  },
   settings: {
     title: 'Profil',
     securityHeading: 'Bezpieczeństwo',
     biometrics: 'Odblokowanie biometrią',
     biometricsHint: 'Wymaga biometrii przy otwarciu aplikacji (zadanie B-21).',
+    biometricsHintLive:
+      'Po zamknięciu aplikacji odblokujesz ją odciskiem palca lub twarzą, bez ponownego logowania.',
+    biometricsEnableFailed: 'Nie udało się włączyć odblokowania biometrią.',
     passkeysHeading: 'Klucze dostępu',
     passkeysIntro: 'Klucze dostępu zastępują hasło i potwierdzają większe przelewy.',
     passkeyAdd: 'Dodaj klucz dostępu (MOCK)',

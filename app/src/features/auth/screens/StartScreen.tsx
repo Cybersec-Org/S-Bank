@@ -12,7 +12,7 @@ import { Banner, Box, Button, Logo, Screen, Text, useTheme } from '@/shared/ui';
 
 import { MockRoleSwitcher } from '../components/MockRoleSwitcher';
 
-type LoginMethod = 'passkey' | 'password' | 'registerPasskey';
+type LoginMethod = 'passkey' | 'password' | 'registerPasskey' | 'unlock';
 
 const ERROR_MESSAGES: Readonly<Record<OidcErrorCode, string>> = {
   cancelled: pl.start.loginCancelled,
@@ -73,6 +73,25 @@ export function StartScreen() {
       setAuthError(
         error instanceof OidcAuthError ? ERROR_MESSAGES[error.code] : pl.start.loginFailed,
       );
+    } finally {
+      setActiveMethod(null);
+    }
+  }
+
+  async function unlock(): Promise<void> {
+    setAuthError(null);
+    setActiveMethod('unlock');
+    try {
+      const result = await session.unlockWithBiometrics();
+      if (result === 'cancelled') {
+        setAuthError(pl.start.unlockCancelled);
+      } else if (result === 'unavailable') {
+        setAuthError(pl.start.unlockUnavailable);
+      } else if (result === 'session_expired') {
+        setAuthError(pl.start.sessionExpired);
+      } else if (result === 'failed') {
+        setAuthError(pl.start.unlockFailed);
+      }
     } finally {
       setActiveMethod(null);
     }
@@ -143,9 +162,9 @@ export function StartScreen() {
         </Banner>
         {authError === null ? null : <Banner tone="warning">{authError}</Banner>}
 
-        {/* Biometric unlock arrives with the refresh token in SecureStore (stage 11, P-09); until then the
-            disabled placeholder stays in the demo only, so live mode shows nothing that cannot work. */}
-        {isMock ? (
+        {/* Phone, live: a session stored behind biometrics (P-18) – "Unlock with biometrics" is active. The demo
+            keeps the disabled placeholder; the web never shows it. */}
+        {isMock || session.status === 'locked' ? (
           <>
             <Box direction="row" align="center" gap="md">
               <View
@@ -166,15 +185,32 @@ export function StartScreen() {
                 }}
               />
             </Box>
-            <Button
-              label={pl.start.unlockBiometrics}
-              variant="outline"
-              size="medium"
-              disabled
-              accessibilityHint={pl.start.unlockBiometricsSoon}
-              onPress={() => undefined}
-              fullWidth
-            />
+            {session.status === 'locked' ? (
+              <>
+                <Button
+                  label={pl.start.unlockBiometrics}
+                  icon="lock"
+                  size="large"
+                  loading={activeMethod === 'unlock'}
+                  disabled={busy}
+                  onPress={() => void unlock()}
+                  fullWidth
+                />
+                <Text variant="caption" tone="muted" align="center">
+                  {pl.start.unlockOtherwiseHint}
+                </Text>
+              </>
+            ) : (
+              <Button
+                label={pl.start.unlockBiometrics}
+                variant="outline"
+                size="medium"
+                disabled
+                accessibilityHint={pl.start.unlockBiometricsSoon}
+                onPress={() => undefined}
+                fullWidth
+              />
+            )}
           </>
         ) : null}
 

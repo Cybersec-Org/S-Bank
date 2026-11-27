@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useState,
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
@@ -24,10 +25,45 @@ import {
   type AuthenticateOidcOptions,
 } from './oidc';
 import { hasRole, homeRouteFor, type AssuranceLevel, type Principal, type Role } from './roles';
-import { createSessionStore, type SessionStore, type SignOutReason } from './session-store';
+import { biometricPreference } from './biometric-preference';
+import { biometricVault, type BiometricVault } from './biometric-vault';
+import {
+  createSessionStore,
+  type SessionStore,
+  type SignOutReason,
+  type UnlockResult,
+} from './session-store';
+
+/** Phone biometric unlock (P-18). Always unavailable on the web and in the demo modes. */
+export interface BiometricsStatus {
+  /** Strong biometrics enrolled on this device. */
+  readonly available: boolean;
+  /** A session is kept behind biometrics. */
+  readonly enabled: boolean;
+  /** Offer biometric unlock once, right after a customer signed in on a phone with biometrics. */
+  readonly offerPending: boolean;
+}
+
+interface BiometricsState {
+  readonly available: boolean;
+  readonly enabled: boolean;
+  readonly asked: boolean;
+}
+
+const NO_BIOMETRICS: BiometricsState = { available: false, enabled: false, asked: true };
+
+interface BiometricsContextValue {
+  readonly state: BiometricsState;
+  readonly update: (patch: Partial<BiometricsState>) => void;
+}
+
+const BiometricsContext = createContext<BiometricsContextValue>({
+  state: NO_BIOMETRICS,
+  update: () => undefined,
+});
 
 export interface Session {
-  readonly status: 'signedOut' | 'signedIn';
+  readonly status: 'signedOut' | 'signedIn' | 'locked';
   /** Set when the session ended on its own (expired, refused by the API); null otherwise. */
   readonly signedOutReason: SignOutReason | null;
   readonly principal: Principal | null;
@@ -52,6 +88,13 @@ export interface Session {
   registerPasskey: () => Promise<void>;
   /** Ends the session and drops every cached query, so no financial data outlives it. */
   signOut: () => void;
+  readonly biometrics: BiometricsStatus;
+  /** Phone: biometric prompt → stored refresh token → signed in (TL-17). */
+  unlockWithBiometrics: () => Promise<UnlockResult>;
+  /** Phone: keep / stop keeping this session behind biometrics. Resolves to the new `enabled` value. */
+  setBiometricsEnabled: (enabled: boolean) => Promise<boolean>;
+  /** Phone: "not now" for the opt-in offer; it is not shown again. */
+  dismissBiometricsOffer: () => void;
 }
 
 const SessionStoreContext = createContext<SessionStore | null>(null);
@@ -60,9 +103,11 @@ interface SessionProviderProps {
   readonly children: ReactNode;
   /** Tests inject a prepared store. */
   readonly store?: SessionStore;
+  /** Tests inject a fake biometric vault (P-18). */
+  readonly vault?: BiometricVault;
 }
 
-export function SessionProvider({ children, store }: SessionProviderProps) {
+export function SessionProvider({ children, store, vault = biometricVault }: SessionProviderProps) {
   const mockEnabled = useIsMockMode();
   const mode = useApiMode();
   const resolvedStore = useMemo(
@@ -75,6 +120,34 @@ export function SessionProvider({ children, store }: SessionProviderProps) {
     [store, mockEnabled, mode],
   );
   const queryClient = useQueryClient();
+  const [biometrics, setBiometrics] = useState<BiometricsState>(NO_BIOMETRICS);
+
+  // Phone, live mode: is a session stored behind biometrics? Then start locked ("Unlock with biometrics").
+  useEffect(() => {
+    if (mockEnabled || Platform.OS === 'web') {
+      return;
+    }
+    let active = true;
+    void Promise.all([vault.isAvailable(), vault.isEnabled(), biometricPreference.wasAsked()])
+      .then(([available, enabled, asked]) => {
+        if (!active) {
+          return;
+        }
+        if (enabled && !available) {
+          // Biometrics were removed from the device: the stored key can no longer be read.
+          void vault.clear().catch(() => undefined);
+        }
+        const usable = enabled && available;
+        setBiometrics({ available, enabled: usable, asked });
+        if (usable && resolvedStore.getState().status === 'signedOut') {
+          resolvedStore.lock();
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [mockEnabled, vault, resolvedStore]);
 
   // Any end of the session – the sign-out button, an expired refresh token, a 401 the API keeps refusing – drops
   // every cached query, so no account, balance or history outlives the session (BASIM4 D5).
@@ -83,13 +156,31 @@ export function SessionProvider({ children, store }: SessionProviderProps) {
       resolvedStore.subscribe(() => {
         if (resolvedStore.getState().status === 'signedOut') {
           queryClient.clear();
+          // The store removed the stored session on sign-out (P-18); the next sign-in offers biometrics again.
+          setBiometrics((current) => {
+            if (!current.enabled) {
+              return current;
+            }
+            void biometricPreference.resetAsked().catch(() => undefined);
+            return { ...current, enabled: false, asked: false };
+          });
         }
       }),
     [resolvedStore, queryClient],
   );
 
+  const biometricsContext = useMemo<BiometricsContextValue>(
+    () => ({
+      state: biometrics,
+      update: (patch) => setBiometrics((current) => ({ ...current, ...patch })),
+    }),
+    [biometrics],
+  );
+
   return (
-    <SessionStoreContext.Provider value={resolvedStore}>{children}</SessionStoreContext.Provider>
+    <SessionStoreContext.Provider value={resolvedStore}>
+      <BiometricsContext.Provider value={biometricsContext}>{children}</BiometricsContext.Provider>
+    </SessionStoreContext.Provider>
   );
 }
 
@@ -110,7 +201,12 @@ async function signInThroughOidc(
   store: SessionStore,
   options: AuthenticateOidcOptions,
 ): Promise<void> {
+  const wasLocked = store.getState().status === 'locked';
   const tokens = await authenticateWithOidc(options);
+  if (wasLocked) {
+    // Signed in another way instead of unlocking: the stored session (maybe of someone else) must not come back.
+    await store.disableBiometrics().catch(() => undefined);
+  }
   if (requiresPasskeyForStaff(parseJwtPrincipal(tokens.accessToken))) {
     void signOutFromOidc(tokens);
     throw new OidcAuthError('passkey_required', 'Staff must sign in with a Passkey');
@@ -156,6 +252,13 @@ export function useSession(): Session {
   const state = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const principal = state.status === 'signedIn' ? state.principal : null;
   const signedOutReason = state.status === 'signedOut' ? (state.reason ?? null) : null;
+  const { state: bio, update: updateBiometrics } = useContext(BiometricsContext);
+  const offerPending =
+    bio.available &&
+    !bio.enabled &&
+    !bio.asked &&
+    state.status === 'signedIn' &&
+    hasRole(principal, 'customer');
 
   return useMemo<Session>(
     () => ({
@@ -189,7 +292,42 @@ export function useSession(): Session {
           void signOutFromOidc({ refreshToken, idToken });
         }
       },
+      biometrics: { available: bio.available, enabled: bio.enabled, offerPending },
+      unlockWithBiometrics: async () => {
+        const result = await store.unlockWithBiometrics();
+        if (result === 'unavailable' || result === 'session_expired') {
+          updateBiometrics({ enabled: false });
+        }
+        return result;
+      },
+      setBiometricsEnabled: async (enabled) => {
+        if (enabled) {
+          const ok = await store.enableBiometrics();
+          if (ok) {
+            updateBiometrics({ enabled: true, asked: true });
+            void biometricPreference.markAsked().catch(() => undefined);
+          }
+          return ok;
+        }
+        await store.disableBiometrics().catch(() => undefined);
+        updateBiometrics({ enabled: false });
+        return false;
+      },
+      dismissBiometricsOffer: () => {
+        updateBiometrics({ asked: true });
+        void biometricPreference.markAsked().catch(() => undefined);
+      },
     }),
-    [state.status, signedOutReason, principal, store, mockEnabled],
+    [
+      state.status,
+      signedOutReason,
+      principal,
+      store,
+      mockEnabled,
+      bio.available,
+      bio.enabled,
+      offerPending,
+      updateBiometrics,
+    ],
   );
 }

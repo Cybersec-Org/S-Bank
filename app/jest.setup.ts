@@ -25,6 +25,11 @@ timeoutManager.setTimeoutProvider({
   clearInterval: (id) => clearInterval(id),
 });
 
+/** AsyncStorage (biometric preference flags, P-18) has no native module under Jest: use the package's own mock. */
+jest.mock('@react-native-async-storage/async-storage', () =>
+  jest.requireActual<object>('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
 /**
  * Screens are tested without a real navigator: `useRouter` returns one shared spy object,
  * `useLocalSearchParams` is controlled per test, and `Redirect` navigates through the same spy.

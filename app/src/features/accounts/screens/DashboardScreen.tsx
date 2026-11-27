@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 
 import { convertPlnToForeign, useRatesQuery, type Rate } from '@/features/rates';
 import { DEMO_PAYMENT_REQUEST_ID } from '@/features/payments';
+import { BiometricsOffer } from '@/shared/auth/BiometricsOffer';
 import { useSession } from '@/shared/auth/SessionProvider';
 import { useIsMockMode } from '@/shared/config/ApiModeProvider';
 import { pl } from '@/shared/i18n/pl';
@@ -63,6 +64,7 @@ export function DashboardScreen() {
 
   return (
     <Screen>
+      <BiometricsOffer />
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text variant="greeting" tone="muted">

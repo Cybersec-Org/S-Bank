@@ -1,4 +1,5 @@
-import { act, fireEvent, screen, render } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { act, fireEvent, screen, render, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -199,5 +200,122 @@ describe('useSession in live mode', () => {
     await act(() => store.signOut('session_expired'));
 
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
+  });
+});
+
+function BiometricsProbe() {
+  const session = useSession();
+  return (
+    <>
+      <Text>{`status: ${session.status}`}</Text>
+      <Text>{`oferta: ${String(session.biometrics.offerPending)}`}</Text>
+      <Button label="Nie teraz" onPress={session.dismissBiometricsOffer} />
+      <Button label="Włącz" onPress={() => void session.setBiometricsEnabled(true)} />
+      <Button label="Wyloguj" onPress={session.signOut} />
+    </>
+  );
+}
+
+describe('biometric unlock on a phone (P-18)', () => {
+  beforeEach(() => AsyncStorage.clear());
+
+  function vault(enabled: boolean, available = true) {
+    return {
+      isAvailable: jest.fn(() => Promise.resolve(available)),
+      isEnabled: jest.fn(() => Promise.resolve(enabled)),
+      enable: jest.fn(),
+      seal: jest.fn(() => Promise.resolve()),
+      unlock: jest.fn(),
+      clear: jest.fn(() => Promise.resolve()),
+    };
+  }
+
+  async function renderPhone(v: ReturnType<typeof vault>) {
+    const store = createSessionStore({ mockEnabled: false, vault: v });
+    await render(
+      <ApiModeProvider mode="live">
+        <QueryClientProvider client={new QueryClient()}>
+          <SessionProvider store={store} vault={v as never}>
+            <BiometricsProbe />
+          </SessionProvider>
+        </QueryClientProvider>
+      </ApiModeProvider>,
+    );
+    return store;
+  }
+
+  it('starts locked when a session is stored behind biometrics', async () => {
+    await renderPhone(vault(true));
+
+    expect(await screen.findByText('status: locked')).toBeOnTheScreen();
+  });
+
+  it('starts signed out and removes the stored session when biometrics are no longer enrolled', async () => {
+    const v = vault(true, false);
+    await renderPhone(v);
+
+    await waitFor(() => expect(v.clear).toHaveBeenCalled());
+    expect(screen.getByText('status: signedOut')).toBeOnTheScreen();
+  });
+
+  it('offers biometric unlock once after a customer signs in, until dismissed', async () => {
+    const store = await renderPhone(vault(false));
+    await act(() =>
+      store.setOidcSession({
+        accessToken: makeJwt({ sub: 'kc-1', realm_access: { roles: ['customer'] } }),
+        refreshToken: 'refresh-1',
+      }),
+    );
+
+    expect(await screen.findByText('oferta: true')).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Nie teraz' }));
+
+    expect(screen.getByText('oferta: false')).toBeOnTheScreen();
+  });
+
+  const customerTokens = () => ({
+    accessToken: makeJwt({ sub: 'kc-1', realm_access: { roles: ['customer'] } }),
+    refreshToken: 'refresh-1',
+  });
+
+  it('keeps offering it when enabling failed', async () => {
+    const v = vault(false);
+    v.enable.mockRejectedValue(new Error('keystore'));
+    const store = await renderPhone(v);
+    await act(() => store.setOidcSession(customerTokens()));
+    expect(await screen.findByText('oferta: true')).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Włącz' }));
+
+    await waitFor(() => expect(v.enable).toHaveBeenCalled());
+    expect(await screen.findByText('oferta: true')).toBeOnTheScreen();
+  });
+
+  it('offers it again at the next sign-in after a sign-out removed the stored session', async () => {
+    const v = vault(false);
+    v.enable.mockResolvedValue({ id: 'K' });
+    const store = await renderPhone(v);
+    await act(() => store.setOidcSession(customerTokens()));
+    expect(await screen.findByText('oferta: true')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Włącz' }));
+    await waitFor(() => expect(screen.getByText('oferta: false')).toBeOnTheScreen());
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Wyloguj' }));
+    await act(() => store.setOidcSession(customerTokens()));
+
+    expect(await screen.findByText('oferta: true')).toBeOnTheScreen();
+  });
+
+  it('never offers it to staff', async () => {
+    const store = await renderPhone(vault(false));
+    await act(() =>
+      store.setOidcSession({
+        accessToken: makeJwt({ sub: 'emp', acr: '2', realm_access: { roles: ['employee'] } }),
+      }),
+    );
+
+    await waitFor(() => expect(screen.getByText('status: signedIn')).toBeOnTheScreen());
+    expect(screen.getByText('oferta: false')).toBeOnTheScreen();
   });
 });

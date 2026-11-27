@@ -29,6 +29,22 @@ export function SettingsScreen() {
   const passkeys = passkeysQuery.data ?? [];
   const [livePasskeyNotice, setLivePasskeyNotice] = useState<string | null>(null);
   const [registeringLive, setRegisteringLive] = useState(false);
+  const [biometricsLivePending, setBiometricsLivePending] = useState(false);
+  const [biometricsLiveError, setBiometricsLiveError] = useState<string | null>(null);
+
+  /** Live (P-18): turning it on creates the biometric key (Android: system prompt); off removes the stored session. */
+  async function handleLiveBiometrics(enabled: boolean): Promise<void> {
+    setBiometricsLiveError(null);
+    setBiometricsLivePending(true);
+    try {
+      const now = await session.setBiometricsEnabled(enabled);
+      if (enabled && !now) {
+        setBiometricsLiveError(pl.settings.biometricsEnableFailed);
+      }
+    } finally {
+      setBiometricsLivePending(false);
+    }
+  }
 
   function handleSignOut(): void {
     session.signOut();
@@ -61,23 +77,39 @@ export function SettingsScreen() {
       )}
       {livePasskeyNotice === null ? null : <Banner tone="info">{livePasskeyNotice}</Banner>}
 
-      <Box gap="sm">
-        <Text variant="heading">{pl.settings.securityHeading}</Text>
-        <AsyncBoundary
-          isLoading={securityQuery.isPending}
-          error={securityQuery.error}
-          isEmpty={false}
-          onRetry={() => void securityQuery.refetch()}
-        >
+      {isMock ? (
+        <Box gap="sm">
+          <Text variant="heading">{pl.settings.securityHeading}</Text>
+          <AsyncBoundary
+            isLoading={securityQuery.isPending}
+            error={securityQuery.error}
+            isEmpty={false}
+            onRetry={() => void securityQuery.refetch()}
+          >
+            <Toggle
+              label={pl.settings.biometrics}
+              hint={pl.settings.biometricsHint}
+              value={securityQuery.data?.biometricsEnabled ?? false}
+              disabled={biometrics.isPending}
+              onValueChange={(enabled) => biometrics.mutate(enabled)}
+            />
+          </AsyncBoundary>
+        </Box>
+      ) : session.biometrics.available ? (
+        <Box gap="sm">
+          <Text variant="heading">{pl.settings.securityHeading}</Text>
           <Toggle
             label={pl.settings.biometrics}
-            hint={pl.settings.biometricsHint}
-            value={securityQuery.data?.biometricsEnabled ?? false}
-            disabled={biometrics.isPending}
-            onValueChange={(enabled) => biometrics.mutate(enabled)}
+            hint={pl.settings.biometricsHintLive}
+            value={session.biometrics.enabled}
+            disabled={biometricsLivePending}
+            onValueChange={(enabled) => void handleLiveBiometrics(enabled)}
           />
-        </AsyncBoundary>
-      </Box>
+          {biometricsLiveError === null ? null : (
+            <Banner tone="warning">{biometricsLiveError}</Banner>
+          )}
+        </Box>
+      ) : null}
 
       <Box gap="sm">
         <Text variant="heading">{pl.settings.passkeysHeading}</Text>

@@ -6,7 +6,8 @@ import type { SecureStorage } from './secure-storage.types';
 
 /**
  * Native implementation: Keychain / Keystore entries that need biometric authentication and are
- * never migrated to another device or restored from a backup (MASVS-STORAGE, SR-09).
+ * never migrated to another device or restored from a backup (MASVS-STORAGE, SR-09). On Android every
+ * read and write of such an entry shows the system biometric prompt.
  */
 const OPTIONS: SecureStore.SecureStoreOptions = {
   requireAuthentication: true,
@@ -14,8 +15,22 @@ const OPTIONS: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
 };
 
+/**
+ * Device-bound Keychain / Keystore entries without a biometric prompt (P-18). Used only for data that is useless
+ * without a biometric-protected key – the encrypted refresh token – so it can be rewritten after every rotation.
+ */
+const DEVICE_OPTIONS: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+};
+
 export const secureStorage: SecureStorage = {
   getItem: (key) => SecureStore.getItemAsync(key, OPTIONS),
   setItem: (key, value) => SecureStore.setItemAsync(key, value, OPTIONS),
   deleteItem: (key) => SecureStore.deleteItemAsync(key, OPTIONS),
+};
+
+export const deviceSecureStorage: SecureStorage = {
+  getItem: (key) => SecureStore.getItemAsync(key, DEVICE_OPTIONS),
+  setItem: (key, value) => SecureStore.setItemAsync(key, value, DEVICE_OPTIONS),
+  deleteItem: (key) => SecureStore.deleteItemAsync(key, DEVICE_OPTIONS),
 };
