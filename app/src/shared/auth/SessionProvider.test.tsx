@@ -1,4 +1,4 @@
-import { fireEvent, screen, render } from '@testing-library/react-native';
+import { act, fireEvent, screen, render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -187,5 +187,17 @@ describe('useSession in live mode', () => {
     expect(store.getState().status).toBe('signedOut');
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
     expect(signOutSpy).toHaveBeenCalledWith({ refreshToken: 'refresh-1', idToken: 'id-1' });
+  });
+
+  it('drops cached data also when the session ends on its own (expired refresh, API refusal)', async () => {
+    const { store, queryClient } = await renderLive();
+    store.setOidcSession({
+      accessToken: makeJwt({ sub: 'kc-1', realm_access: { roles: ['customer'] } }),
+    });
+    queryClient.setQueryData(['accounts', 'list'], [{ balanceGrosze: 1 }]);
+
+    await act(() => store.signOut('session_expired'));
+
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
   });
 });

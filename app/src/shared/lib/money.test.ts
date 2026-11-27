@@ -5,10 +5,31 @@ import {
   formatScaledRate,
   formatSignedMoney,
   formatWholeMoney,
+  jsonAmountToGrosze,
   parseAmountToGrosze,
 } from './money';
 
 const NBSP = ' ';
+
+describe('jsonAmountToGrosze', () => {
+  it('converts API amounts exactly, without floating-point multiplication', () => {
+    expect(jsonAmountToGrosze(12500)).toBe(1_250_000);
+    expect(jsonAmountToGrosze(1850.5)).toBe(185_050);
+    expect(jsonAmountToGrosze(0.01)).toBe(1);
+    expect(jsonAmountToGrosze(1.1)).toBe(110);
+    // 1.15 * 100 is 114.99999999999999 in floating point; the text-based parser is exact.
+    expect(jsonAmountToGrosze(1.15)).toBe(115);
+    expect(jsonAmountToGrosze(-25.4)).toBe(-2540);
+    expect(jsonAmountToGrosze(0)).toBe(0);
+  });
+
+  it('refuses amounts it cannot represent exactly instead of rounding them', () => {
+    expect(() => jsonAmountToGrosze(10.005)).toThrow(RangeError);
+    expect(() => jsonAmountToGrosze(1e21)).toThrow(RangeError);
+    expect(() => jsonAmountToGrosze(Number.NaN)).toThrow(RangeError);
+    expect(() => jsonAmountToGrosze(Number.POSITIVE_INFINITY)).toThrow(RangeError);
+  });
+});
 
 describe('formatMoney', () => {
   it.each([

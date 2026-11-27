@@ -1,13 +1,16 @@
+import type * as OidcModule from './oidc';
 import type * as SessionStoreModule from './session-store';
 import { SECURE_STORAGE_KEYS } from './secure-storage.types';
 
 // jest.setup.ts loads session-store.ts before this file registers its mocks, so a fresh copy is loaded here.
 let createSessionStore: (typeof SessionStoreModule)['createSessionStore'];
+let OidcAuthError: (typeof OidcModule)['OidcAuthError'];
 beforeAll(() => {
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     createSessionStore = (require('./session-store') as typeof SessionStoreModule)
       .createSessionStore;
+    OidcAuthError = (require('./oidc') as typeof OidcModule).OidcAuthError;
     /* eslint-enable @typescript-eslint/no-require-imports */
   });
 });
@@ -90,5 +93,80 @@ describe('mock step-up', () => {
       acr: '2',
       authTime: 1_700_000_123,
     });
+  });
+});
+
+describe('refresh (P-08)', () => {
+  function signedInStore(
+    refreshTokens: (token: string) => Promise<{ accessToken: string; refreshToken?: string }>,
+  ) {
+    const store = createSessionStore({ mockEnabled: false, refreshTokens });
+    store.setOidcSession({ accessToken, refreshToken: 'refresh-1' });
+    return store;
+  }
+
+  it('shares one refresh between concurrent callers and keeps the rotated refresh token', async () => {
+    const newAccess = makeJwt({
+      sub: 'kc-1',
+      exp: 1_900_000_000,
+      realm_access: { roles: ['customer'] },
+    });
+    const refreshTokens = jest.fn(() =>
+      Promise.resolve({ accessToken: newAccess, refreshToken: 'refresh-2' }),
+    );
+    const store = signedInStore(refreshTokens);
+
+    const results = await Promise.all([store.refresh(), store.refresh(), store.refresh()]);
+
+    expect(results).toEqual([true, true, true]);
+    expect(refreshTokens).toHaveBeenCalledTimes(1);
+    expect(refreshTokens).toHaveBeenCalledWith('refresh-1');
+    const state = store.getState();
+    expect(state.status === 'signedIn' && state.refreshToken).toBe('refresh-2');
+    expect(store.getAccessToken()).toBe(newAccess);
+  });
+
+  it('signs out with session_expired when Keycloak refuses the refresh token', async () => {
+    const store = signedInStore(() =>
+      Promise.reject(new OidcAuthError('session_expired', 'invalid_grant')),
+    );
+
+    await expect(store.refresh()).resolves.toBe(false);
+
+    expect(store.getState()).toEqual({ status: 'signedOut', reason: 'session_expired' });
+  });
+
+  it('keeps the session on a network error and lets the next request try again', async () => {
+    const store = signedInStore(() => Promise.reject(new OidcAuthError('failed', 'offline')));
+
+    await expect(store.refresh()).resolves.toBe(false);
+
+    expect(store.getState().status).toBe('signedIn');
+  });
+
+  it('drops a refresh result that arrives after sign-out', async () => {
+    let finish: (tokens: { accessToken: string }) => void = () => undefined;
+    const store = signedInStore(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+
+    const pending = store.refresh();
+    store.signOut();
+    finish({ accessToken });
+
+    await expect(pending).resolves.toBe(false);
+    expect(store.getState().status).toBe('signedOut');
+  });
+
+  it('cannot refresh without a refresh token', async () => {
+    const refreshTokens = jest.fn();
+    const store = createSessionStore({ mockEnabled: false, refreshTokens });
+    store.setOidcSession({ accessToken });
+
+    await expect(store.refresh()).resolves.toBe(false);
+    expect(refreshTokens).not.toHaveBeenCalled();
   });
 });

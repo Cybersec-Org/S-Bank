@@ -74,7 +74,13 @@ const discoveryDocumentSchema = z.object({
   end_session_endpoint: z.url().optional(),
 });
 
-export type OidcErrorCode = 'cancelled' | 'access_denied' | 'failed' | 'passkey_required';
+export type OidcErrorCode =
+  | 'cancelled'
+  | 'access_denied'
+  | 'failed'
+  | 'passkey_required'
+  /** Keycloak refused the refresh token (`invalid_grant`): SSO session ended, revoked or reused. */
+  | 'session_expired';
 
 export class OidcAuthError extends Error {
   readonly code: OidcErrorCode;
@@ -354,6 +360,29 @@ export async function completeOidcRedirect(callbackUrl: string): Promise<Complet
     pending.nonce,
   );
   return { tokens, ...(pending.returnTo === undefined ? {} : { returnTo: pending.returnTo }) };
+}
+
+/**
+ * Refresh-token grant (SR-04: Keycloak rotates the refresh token on every use, so the caller must keep the new one).
+ * A refusal by Keycloak (`invalid_grant`: session ended, user disabled, token reused) → `session_expired`;
+ * no answer at all (offline, timeout) → `failed`, so a flaky network does not sign the user out.
+ */
+export async function refreshTokens(refreshToken: string): Promise<OidcTokens> {
+  const discovery = await getDiscovery();
+  const response = await AuthSession.refreshAsync(
+    { clientId: env.oidcClientId, refreshToken },
+    discovery,
+  ).catch((error: unknown) => {
+    throw error instanceof AuthSession.TokenError
+      ? new OidcAuthError('session_expired', 'Refresh token refused')
+      : new OidcAuthError('failed', 'Token endpoint unreachable');
+  });
+  return {
+    accessToken: response.accessToken,
+    ...(response.idToken === undefined ? {} : { idToken: response.idToken }),
+    // Keycloak always rotates; keep the old one only if a server ever answers without a new token.
+    refreshToken: response.refreshToken ?? refreshToken,
+  };
 }
 
 /**

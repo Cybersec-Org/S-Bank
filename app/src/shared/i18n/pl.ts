@@ -99,6 +99,9 @@ export const pl = {
     loginAccessDenied:
       'Odmowa dostępu. Pracownik i administrator muszą zalogować się kluczem dostępu (Passkey).',
     loginFailed: 'Nie udało się zalogować przez serwer tożsamości. Spróbuj ponownie.',
+    sessionExpired: 'Sesja wygasła. Zaloguj się ponownie.',
+    accessRejected:
+      'Bank nie wpuścił tego konta do bankowości (np. brak powiązanego klienta). Skontaktuj się z bankiem.',
     loginPasskeyRequired:
       'Pracownik i administrator logują się kluczem dostępu. Wybierz „Zaloguj się kluczem dostępu”.',
     registerPasskey: 'Zarejestruj klucz dostępu (Passkey)',

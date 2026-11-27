@@ -35,7 +35,7 @@ import type { ApiMode } from '@/shared/config/env';
 
 import { createDevApiTransport, type DevApiTransport } from './dev-api-transport';
 import type { AccessTokenProvider } from './client';
-import { createHttpTransport } from './http';
+import { createHttpTransport, type HttpTransportOptions } from './http';
 import type { MockOptions } from './mock/mock-runner';
 
 export interface Repositories {
@@ -59,6 +59,10 @@ interface RepositoryContext {
   readonly getIdentity?: () => DevApiIdentity | null;
   /** Current in-memory OIDC access token; used only by live `*.http.ts` repositories. */
   readonly getAccessToken?: AccessTokenProvider | undefined;
+  /** Live mode: one shared token refresh on a 401 (SessionStore.refresh). */
+  readonly refreshSession?: (() => Promise<boolean>) | undefined;
+  /** Live mode: a 401 after a successful refresh – end the session. */
+  readonly onAccessRejected?: (() => void) | undefined;
 }
 
 /** Deterministic in-memory repositories; `options` lets tests remove latency or force errors. */
@@ -82,9 +86,9 @@ export function createMockRepositories(
 
 /** Repositories backed by the NestJS API. */
 export function createHttpRepositories(
-  getAccessToken: AccessTokenProvider = () => undefined,
+  options: HttpTransportOptions = { getAccessToken: () => undefined },
 ): Repositories {
-  const transport = createHttpTransport(getAccessToken);
+  const transport = createHttpTransport(options);
   return {
     accounts: createHttpAccountsRepository(transport),
     admin: createHttpAdminRepository(transport),
@@ -123,6 +127,8 @@ export function createRepositories({
   baseUrl,
   getIdentity,
   getAccessToken,
+  refreshSession,
+  onAccessRejected,
 }: RepositoryContext): Repositories {
   switch (mode) {
     case 'mock':
@@ -133,6 +139,10 @@ export function createRepositories({
       }
       return createHybridRepositories(getAcr, createDevApiTransport({ baseUrl, getIdentity }));
     case 'live':
-      return createHttpRepositories(getAccessToken);
+      return createHttpRepositories({
+        getAccessToken: getAccessToken ?? (() => undefined),
+        refreshSession,
+        onAccessRejected,
+      });
   }
 }

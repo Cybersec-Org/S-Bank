@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { OidcAuthError, type OidcErrorCode } from '@/shared/auth/oidc';
+import type { SignOutReason } from '@/shared/auth/session-store';
 import { homeRouteFor } from '@/shared/auth/roles';
 import { useSession } from '@/shared/auth/SessionProvider';
 import { useIsMockMode } from '@/shared/config/ApiModeProvider';
@@ -17,7 +18,13 @@ const ERROR_MESSAGES: Readonly<Record<OidcErrorCode, string>> = {
   cancelled: pl.start.loginCancelled,
   access_denied: pl.start.loginAccessDenied,
   passkey_required: pl.start.loginPasskeyRequired,
+  session_expired: pl.start.sessionExpired,
   failed: pl.start.loginFailed,
+};
+
+const SIGN_OUT_MESSAGES: Readonly<Record<SignOutReason, string>> = {
+  session_expired: pl.start.sessionExpired,
+  access_rejected: pl.start.accessRejected,
 };
 
 /** Web (P-17): a sign-in that came back with an error lands here as `/?authError=<code>`. */
@@ -39,7 +46,11 @@ export function StartScreen() {
   const session = useSession();
   const isMock = useIsMockMode();
   const { authError: authErrorParam } = useLocalSearchParams<{ authError?: string }>();
-  const [authError, setAuthError] = useState<string | null>(() => messageForCode(authErrorParam));
+  const [authError, setAuthError] = useState<string | null>(
+    () =>
+      messageForCode(authErrorParam) ??
+      (session.signedOutReason === null ? null : SIGN_OUT_MESSAGES[session.signedOutReason]),
+  );
   const [activeMethod, setActiveMethod] = useState<LoginMethod | null>(null);
   const [devVisible, setDevVisible] = useState(false);
 

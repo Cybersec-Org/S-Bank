@@ -125,4 +125,22 @@ describe('StartScreen', () => {
       spy.mockRestore();
     });
   });
+
+  describe('after the session ended on its own', () => {
+    it.each([
+      ['session_expired', pl.start.sessionExpired],
+      ['access_rejected', pl.start.accessRejected],
+    ] as const)('explains a %s sign-out', async (reason, message) => {
+      await renderWithProviders(<StartScreen />, { apiMode: 'live', signOutReason: reason });
+
+      expect(screen.getByText(message)).toBeOnTheScreen();
+    });
+
+    it('shows no message after a normal start', async () => {
+      await renderWithProviders(<StartScreen />, { apiMode: 'live' });
+
+      expect(screen.queryByText(pl.start.sessionExpired)).not.toBeOnTheScreen();
+      expect(screen.queryByText(pl.start.accessRejected)).not.toBeOnTheScreen();
+    });
+  });
 });

@@ -93,6 +93,29 @@ export function formatAmountInput(minorUnits: number): string {
   return `${whole},${fraction}`;
 }
 
+const JSON_AMOUNT_PATTERN = /^(-?)(\d+)(?:\.(\d{1,2}))?$/;
+
+/**
+ * Exact boundary conversion for the API's amounts (PLN as a JSON number: `12500`, `1850.5`, `0.01`). The number's
+ * shortest decimal text is parsed as digits, so no floating-point multiplication touches money. More than two
+ * decimals, exponent notation or a non-safe result is refused instead of being rounded silently.
+ */
+export function jsonAmountToGrosze(amount: number): number {
+  if (!Number.isFinite(amount)) {
+    throw new RangeError('Amount must be a finite number');
+  }
+  const match = JSON_AMOUNT_PATTERN.exec(String(amount));
+  if (match === null) {
+    throw new RangeError('Amount must have at most two decimal places');
+  }
+  const [, sign = '', whole = '0', fraction = ''] = match;
+  const grosze = Number(whole) * GROSZE_PER_ZLOTY + Number(fraction.padEnd(2, '0'));
+  if (!Number.isSafeInteger(grosze)) {
+    throw new RangeError('Amount is too large');
+  }
+  return sign === '-' && grosze !== 0 ? -grosze : grosze;
+}
+
 /**
  * Boundary conversion for an API that sends złoty as a JSON number (`150.5`). The value is rounded to whole
  * grosze once, here, so floating point never reaches the rest of the app.

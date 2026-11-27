@@ -1,5 +1,11 @@
 import { MOCK_PRINCIPALS } from './mock-principals';
-import { accessTokenExpiresAt, parseJwtPrincipal, type OidcTokens } from './oidc';
+import {
+  accessTokenExpiresAt,
+  OidcAuthError,
+  parseJwtPrincipal,
+  refreshTokens as refreshTokensWithKeycloak,
+  type OidcTokens,
+} from './oidc';
 import type { AssuranceLevel, Principal, Role } from './roles';
 import { secureStorage } from './secure-storage';
 import { SECURE_STORAGE_KEYS } from './secure-storage.types';
@@ -18,8 +24,15 @@ async function clearPersistedRefreshToken(): Promise<void> {
   ]);
 }
 
+/**
+ * Why the session ended without the user pressing "Sign out": `session_expired` – Keycloak refused the refresh
+ * token (idle/max time, killed by an administrator, reuse); `access_rejected` – the API refused a fresh token
+ * (e.g. no customer linked to this login, role removed).
+ */
+export type SignOutReason = 'session_expired' | 'access_rejected';
+
 export type SessionState =
-  | { readonly status: 'signedOut' }
+  | { readonly status: 'signedOut'; readonly reason?: SignOutReason | undefined }
   | {
       readonly status: 'signedIn';
       readonly principal: Principal;
@@ -42,7 +55,14 @@ export interface SessionStore {
   raiseMockAssurance: () => void;
   /** Live OIDC mode: keeps the tokens and the decoded principal in memory only (SR-09). */
   setOidcSession: (tokens: OidcTokens) => void;
-  signOut: () => void;
+  /**
+   * Live OIDC mode: one shared refresh-token grant for every caller (single-flight), so concurrent 401s never send
+   * the same – already rotated – refresh token twice (which would make Keycloak revoke the session).
+   * `true` = new tokens are in memory. A refusal by Keycloak signs out with `session_expired`; a network error
+   * keeps the session and returns `false`.
+   */
+  refresh: () => Promise<boolean>;
+  signOut: (reason?: SignOutReason) => void;
 }
 
 interface SessionStoreOptions {
@@ -51,6 +71,8 @@ interface SessionStoreOptions {
   readonly principals?: Readonly<Record<Role, Principal>>;
   /** Clock in epoch milliseconds; tests inject a fixed one. */
   readonly now?: () => number;
+  /** Refresh-token grant; tests inject a fake. */
+  readonly refreshTokens?: (refreshToken: string) => Promise<OidcTokens>;
 }
 
 const STEP_UP_LEVEL: AssuranceLevel = '2';
@@ -59,13 +81,55 @@ export function createSessionStore({
   mockEnabled,
   principals = MOCK_PRINCIPALS,
   now = Date.now,
+  refreshTokens = refreshTokensWithKeycloak,
 }: SessionStoreOptions): SessionStore {
   let state: SessionState = { status: 'signedOut' };
+  let refreshing: Promise<boolean> | null = null;
   const listeners = new Set<Listener>();
 
   function setState(next: SessionState): void {
     state = next;
     listeners.forEach((listener) => listener());
+  }
+
+  function setOidcSession(tokens: OidcTokens): void {
+    const principal = parseJwtPrincipal(tokens.accessToken);
+    setState({
+      status: 'signedIn',
+      principal,
+      accessToken: tokens.accessToken,
+      idToken: tokens.idToken,
+      refreshToken: tokens.refreshToken,
+      expiresAt: accessTokenExpiresAt(tokens.accessToken),
+    });
+  }
+
+  function signOut(reason?: SignOutReason): void {
+    if (!mockEnabled) {
+      void clearPersistedRefreshToken().catch(() => undefined);
+    }
+    setState(reason === undefined ? { status: 'signedOut' } : { status: 'signedOut', reason });
+  }
+
+  async function runRefresh(): Promise<boolean> {
+    const current = state;
+    if (current.status !== 'signedIn' || current.refreshToken === undefined) {
+      return false;
+    }
+    try {
+      const tokens = await refreshTokens(current.refreshToken);
+      // Signed out (or a different session started) while the grant was in flight: drop the result.
+      if (state !== current) {
+        return false;
+      }
+      setOidcSession(tokens);
+      return true;
+    } catch (error) {
+      if (error instanceof OidcAuthError && error.code === 'session_expired' && state === current) {
+        signOut('session_expired');
+      }
+      return false;
+    }
   }
 
   function requireMock(): void {
@@ -100,22 +164,13 @@ export function createSessionStore({
         });
       }
     },
-    setOidcSession: (tokens) => {
-      const principal = parseJwtPrincipal(tokens.accessToken);
-      setState({
-        status: 'signedIn',
-        principal,
-        accessToken: tokens.accessToken,
-        idToken: tokens.idToken,
-        refreshToken: tokens.refreshToken,
-        expiresAt: accessTokenExpiresAt(tokens.accessToken),
+    setOidcSession,
+    refresh: () => {
+      refreshing ??= runRefresh().finally(() => {
+        refreshing = null;
       });
+      return refreshing;
     },
-    signOut: () => {
-      if (!mockEnabled) {
-        void clearPersistedRefreshToken().catch(() => undefined);
-      }
-      setState({ status: 'signedOut' });
-    },
+    signOut,
   };
 }

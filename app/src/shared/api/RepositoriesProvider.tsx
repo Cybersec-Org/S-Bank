@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
 import { useApiMode } from '@/shared/config/ApiModeProvider';
 import { devApiIdentityFor } from '@/shared/auth/dev-api-identity';
+import { signOutFromOidc } from '@/shared/auth/oidc';
 import { useSessionStore } from '@/shared/auth/SessionProvider';
 import { env } from '@/shared/config/env';
 
@@ -33,6 +34,15 @@ export function RepositoriesProvider({ children, repositories }: RepositoriesPro
           return state.status === 'signedIn' ? devApiIdentityFor(state.principal) : null;
         },
         getAccessToken: () => sessionStore.getAccessToken() ?? undefined,
+        refreshSession: () => sessionStore.refresh(),
+        onAccessRejected: () => {
+          const state = sessionStore.getState();
+          sessionStore.signOut('access_rejected');
+          if (state.status === 'signedIn') {
+            // The tokens are valid in Keycloak but useless here: end that SSO session too.
+            void signOutFromOidc({ refreshToken: state.refreshToken, idToken: state.idToken });
+          }
+        },
       }),
     [repositories, mode, sessionStore],
   );

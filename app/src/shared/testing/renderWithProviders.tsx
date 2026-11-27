@@ -5,7 +5,11 @@ import type { ReactElement, ReactNode } from 'react';
 import { RepositoriesProvider } from '@/shared/api/RepositoriesProvider';
 import { createMockRepositories, type Repositories } from '@/shared/api/repositories';
 import { SessionProvider } from '@/shared/auth/SessionProvider';
-import { createSessionStore, type SessionStore } from '@/shared/auth/session-store';
+import {
+  createSessionStore,
+  type SessionStore,
+  type SignOutReason,
+} from '@/shared/auth/session-store';
 import type { Role } from '@/shared/auth/roles';
 import { MOCK_NOW_ISO } from '@/shared/api/mock/mock-data';
 import { ApiModeProvider } from '@/shared/config/ApiModeProvider';
@@ -19,6 +23,8 @@ interface RenderOptions {
   readonly apiMode?: ApiMode;
   /** Signs in as this demo identity before rendering. */
   readonly signedInAs?: Role;
+  /** Starts signed out with this reason, as after an expired or refused session. */
+  readonly signOutReason?: SignOutReason;
   /** Replaces whole repositories, for example with an error-throwing stub. */
   readonly repositories?: (base: Repositories) => Repositories;
   readonly mockOptions?: Partial<MockOptions>;
@@ -64,6 +70,9 @@ export async function renderWithProviders(ui: ReactElement, options: RenderOptio
   const store: SessionStore = createSessionStore({ mockEnabled: true });
   if (options.signedInAs !== undefined) {
     store.signInAsMock(options.signedInAs);
+  }
+  if (options.signOutReason !== undefined) {
+    store.signOut(options.signOutReason);
   }
   const base = createMockRepositories(
     () => {

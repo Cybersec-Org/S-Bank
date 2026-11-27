@@ -1,5 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { Platform } from 'react-native';
 
 import { useApiMode, useIsMockMode } from '@/shared/config/ApiModeProvider';
@@ -17,10 +24,12 @@ import {
   type AuthenticateOidcOptions,
 } from './oidc';
 import { hasRole, homeRouteFor, type AssuranceLevel, type Principal, type Role } from './roles';
-import { createSessionStore, type SessionStore } from './session-store';
+import { createSessionStore, type SessionStore, type SignOutReason } from './session-store';
 
 export interface Session {
   readonly status: 'signedOut' | 'signedIn';
+  /** Set when the session ended on its own (expired, refused by the API); null otherwise. */
+  readonly signedOutReason: SignOutReason | null;
   readonly principal: Principal | null;
   readonly acr: AssuranceLevel | null;
   readonly isStepUpFresh: boolean;
@@ -65,6 +74,20 @@ export function SessionProvider({ children, store }: SessionProviderProps) {
       }),
     [store, mockEnabled, mode],
   );
+  const queryClient = useQueryClient();
+
+  // Any end of the session – the sign-out button, an expired refresh token, a 401 the API keeps refusing – drops
+  // every cached query, so no account, balance or history outlives the session (BASIM4 D5).
+  useEffect(
+    () =>
+      resolvedStore.subscribe(() => {
+        if (resolvedStore.getState().status === 'signedOut') {
+          queryClient.clear();
+        }
+      }),
+    [resolvedStore, queryClient],
+  );
+
   return (
     <SessionStoreContext.Provider value={resolvedStore}>{children}</SessionStoreContext.Provider>
   );
@@ -129,14 +152,15 @@ export function resetRedirectCompletion(): void {
 
 export function useSession(): Session {
   const store = useSessionStore();
-  const queryClient = useQueryClient();
   const mockEnabled = useIsMockMode();
   const state = useSyncExternalStore(store.subscribe, store.getState, store.getState);
   const principal = state.status === 'signedIn' ? state.principal : null;
+  const signedOutReason = state.status === 'signedOut' ? (state.reason ?? null) : null;
 
   return useMemo<Session>(
     () => ({
       status: state.status,
+      signedOutReason,
       principal,
       acr: principal === null ? null : principal.acr,
       isStepUpFresh: isStepUpFresh(principal),
@@ -159,13 +183,13 @@ export function useSession(): Session {
         const current = store.getState();
         const refreshToken = current.status === 'signedIn' ? current.refreshToken : undefined;
         const idToken = current.status === 'signedIn' ? current.idToken : undefined;
+        // SessionProvider's store subscription drops every cached query on this transition.
         store.signOut();
-        queryClient.clear();
         if (!mockEnabled && (refreshToken !== undefined || idToken !== undefined)) {
           void signOutFromOidc({ refreshToken, idToken });
         }
       },
     }),
-    [state.status, principal, store, queryClient, mockEnabled],
+    [state.status, signedOutReason, principal, store, mockEnabled],
   );
 }
